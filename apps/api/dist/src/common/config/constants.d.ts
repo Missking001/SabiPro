@@ -1,0 +1,10 @@
+export declare const INQUIRY_DEDUP_WINDOW_MINUTES = 10;
+export declare const PASSWORD_RESET_EXPIRY_HOURS = 1;
+export declare const EMAIL_VERIFICATION_EXPIRY_HOURS = 24;
+export declare const PAYOUT_AUTO_RELEASE_DAYS = 7;
+export declare const MAX_LOGIN_ATTEMPTS = 5;
+export declare const DEFAULT_PAGE_SIZE = 20;
+export declare const MAX_PORTFOLIO_IMAGES = 6;
+export declare const MAX_FILE_SIZE_BYTES: number;
+export declare const MAX_AVATAR_SIZE_BYTES: number;
+export declare const ALLOWED_MIME_TYPES: string[];

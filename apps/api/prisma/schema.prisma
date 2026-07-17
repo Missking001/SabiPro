@@ -1,0 +1,268 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id                      String        @id @default(cuid())
+  name                    String
+  email                   String        @unique
+  password                String
+  role                    Role          @default(CONSUMER)
+  avatarUrl               String?
+  phone                   String?
+  city                    String?
+  isActive                Boolean       @default(true)
+  isVerified              Boolean       @default(false)
+  verificationToken       String?
+  verificationTokenExpiry DateTime?
+  resetToken              String?
+  resetTokenExpiry        DateTime?
+  createdAt               DateTime      @default(now())
+  updatedAt               DateTime      @updatedAt
+  
+  // Relations
+  provider     Provider?
+  reviews      Review[]
+  inquiries    Inquiry[]
+  notifications Notification[]
+  transactions Transaction[]
+  contentFlags ContentFlag[]
+}
+
+enum Role {
+  CONSUMER
+  PROVIDER
+  ADMIN
+}
+
+model Provider {
+  id              String          @id @default(cuid())
+  userId          String          @unique
+  slug            String          @unique
+  bio             String?
+  tradeCategory   String
+  location        String
+  portfolioUrls   String[]
+  priceRange      String?
+  isAvailable     Boolean         @default(true)
+  onboardingState OnboardingState @default(REGISTERED)
+  averageRating   Float           @default(0.0)
+  totalReviews    Int             @default(0)
+  isVerified      Boolean         @default(false)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  // Relations
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reviews         Review[]
+  inquiries       Inquiry[]
+  vettingBadge    VettingBadge?
+  payouts         Payout[]
+  transactions    Transaction[]
+}
+
+enum OnboardingState {
+  REGISTERED
+  PROFILE_COMPLETE
+  ACTIVE
+  VERIFIED
+}
+
+model Review {
+  id          String    @id @default(cuid())
+  consumerId  String
+  providerId  String
+  rating      Int
+  comment     String?
+  isVisible   Boolean   @default(true)
+  isFlagged   Boolean   @default(false)
+  flaggedAt   DateTime?
+  createdAt   DateTime  @default(now())
+
+  // Relations
+  consumer    User      @relation(fields: [consumerId], references: [id], onDelete: Cascade)
+  provider    Provider  @relation(fields: [providerId], references: [id], onDelete: Cascade)
+
+  @@unique([consumerId, providerId])
+}
+
+model Inquiry {
+  id          String        @id @default(cuid())
+  consumerId  String
+  providerId  String
+  message     String
+  status      InquiryStatus @default(PENDING)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  // Relations
+  consumer    User          @relation(fields: [consumerId], references: [id], onDelete: Cascade)
+  provider    Provider      @relation(fields: [providerId], references: [id], onDelete: Cascade)
+}
+
+enum InquiryStatus {
+  PENDING
+  SEEN
+  RESPONDED
+  CLOSED
+}
+
+model VettingBadge {
+  id         String    @id @default(cuid())
+  providerId String    @unique
+  badgeType  BadgeType
+  issuedAt   DateTime  @default(now())
+  expiresAt  DateTime?
+  issuedBy   String
+  isActive   Boolean   @default(true)
+
+  // Relations
+  provider   Provider  @relation(fields: [providerId], references: [id], onDelete: Cascade)
+}
+
+enum BadgeType {
+  IDENTITY
+  CREDENTIAL
+  BOTH
+}
+
+model Notification {
+  id          String           @id @default(cuid())
+  userId      String
+  type        NotificationType
+  message     String
+  channel     Channel          @default(IN_APP)
+  isRead      Boolean          @default(false)
+  relatedId   String?
+  relatedType String?
+  createdAt   DateTime         @default(now())
+
+  // Relations
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+enum NotificationType {
+  INQUIRY_RECEIVED
+  INQUIRY_REPLIED
+  REVIEW_POSTED
+  BADGE_ISSUED
+  BADGE_REVOKED
+  ACCOUNT_SUSPENDED
+  PAYMENT_INITIATED
+  PAYMENT_CONFIRMED
+  PAYMENT_FAILED
+  PAYOUT_RELEASED
+  DISPUTE_RAISED
+  DISPUTE_RESOLVED
+  REFUND_ISSUED
+  PAYOUT_WITHHELD
+}
+
+enum Channel {
+  IN_APP
+  EMAIL
+}
+
+model Transaction {
+  id               String        @id @default(cuid())
+  consumerId       String
+  providerId       String
+  inquiryId        String?
+  amount           Int
+  currency         String        @default("NGN")
+  status           TxStatus      @default(PENDING)
+  gatewayRef       String        @unique
+  gatewayStatus    String
+  payoutStatus     PayoutStatus  @default(PENDING)
+  payoutReleasedAt DateTime?
+  metadata         Json?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  // Relations
+  consumer         User          @relation(fields: [consumerId], references: [id], onDelete: Cascade)
+  provider         Provider      @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  payouts          Payout[]
+}
+
+enum TxStatus {
+  PENDING
+  SUCCESSFUL
+  FAILED
+  REFUNDED
+  DISPUTED
+}
+
+enum PayoutStatus {
+  PENDING
+  RELEASED
+  WITHHELD
+}
+
+model Payout {
+  id            String       @id @default(cuid())
+  providerId    String
+  transactionId String
+  amount        Int
+  platformFee   Int
+  status        PayoutState  @default(PENDING)
+  bankCode      String
+  accountNumber String
+  gatewayRef    String?
+  processedAt   DateTime?
+  createdAt     DateTime     @default(now())
+
+  // Relations
+  provider      Provider     @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  transaction   Transaction  @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+}
+
+enum PayoutState {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+model ContentFlag {
+  id          String     @id @default(cuid())
+  reportedBy  String
+  targetId    String
+  targetType  FlagTarget
+  reason      String?
+  status      FlagStatus @default(PENDING)
+  resolvedBy  String?
+  resolvedAt  DateTime?
+  createdAt   DateTime   @default(now())
+
+  // Relations
+  reporter    User       @relation(fields: [reportedBy], references: [id], onDelete: Cascade)
+}
+
+enum FlagTarget {
+  REVIEW
+  INQUIRY
+}
+
+enum FlagStatus {
+  PENDING
+  REVIEWED
+  DISMISSED
+  REMOVED
+}
+
+model PaymentLog {
+  id            String   @id @default(cuid())
+  transactionId String?
+  gatewayRef    String?
+  event         String
+  status        String
+  payload       Json
+  createdAt     DateTime @default(now())
+}
+

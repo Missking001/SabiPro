@@ -1,0 +1,10 @@
+export const INQUIRY_DEDUP_WINDOW_MINUTES = 10;
+export const PASSWORD_RESET_EXPIRY_HOURS = 1;
+export const EMAIL_VERIFICATION_EXPIRY_HOURS = 24;
+export const PAYOUT_AUTO_RELEASE_DAYS = 7;
+export const MAX_LOGIN_ATTEMPTS = 5;
+export const DEFAULT_PAGE_SIZE = 20;
+export const MAX_PORTFOLIO_IMAGES = 6;
+export const MAX_FILE_SIZE_BYTES = 2 * 1024 * 1024; // 2MB
+export const MAX_AVATAR_SIZE_BYTES = 1 * 1024 * 1024; // 1MB
+export const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
