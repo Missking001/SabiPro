@@ -1,0 +1,101 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-primary-base: #1A6B3C;
+  --color-primary-hover: #218C4A;
+  --color-primary-tint: #EAF5EE;
+  --color-primary-deep: #0F4D2E;
+
+  --color-secondary-base: #D4801A;
+  --color-secondary-hover: #EF9F27;
+  --color-secondary-tint: #FAEEDA;
+  --color-secondary-deep: #633806;
+
+  --color-tertiary-base: #185FA5;
+  --color-tertiary-hover: #378ADD;
+  --color-tertiary-tint: #E6F1FB;
+  --color-tertiary-deep: #0C447C;
+
+  --color-neutral-900: #1A1A1A;
+  --color-neutral-700: #444441;
+  --color-neutral-500: #888780;
+  --color-neutral-0: #FFFFFF;
+
+  --color-surface-bg: #F7F6F2;
+  --color-surface-border: #ECEAE3;
+  --color-surface-input: #D3D1C7;
+  --color-surface-disabled: #B4B2A9;
+
+  --color-error-bg: #FCEBEB;
+  --color-error-border: #F7C1C1;
+  --color-error-base: #E24B4A;
+  --color-error-text: #A32D2D;
+  --color-error-deep: #791F1F;
+
+  --color-success-bg: #EAF5EE;
+  --color-success-border: #9FE1CB;
+  --color-success-base: #1D9E75;
+  --color-success-text: #0F6E56;
+  --color-success-deep: #085041;
+
+  --color-warning-bg: #FAEEDA;
+  --color-warning-border: #FAC775;
+  --color-warning-base: #EF9F27;
+  --color-warning-text: #BA7517;
+  --color-warning-deep: #633806;
+
+  --color-info-bg: #E6F1FB;
+  --color-info-border: #B5D4F4;
+  --color-info-base: #378ADD;
+  --color-info-text: #185FA5;
+  --color-info-deep: #0C447C;
+}
+
+body {
+  background: var(--color-surface-bg);
+  color: var(--color-neutral-700);
+  font-family: Inter, system-ui, -apple-system, sans-serif;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Dark mode overrides */
+.dark {
+  --color-neutral-900: #F0EFE9;
+  --color-neutral-700: #C8C6BE;
+  --color-neutral-500: #7A786F;
+  --color-neutral-0: #1C1C1A;
+
+  --color-surface-bg: #141413;
+  --color-surface-border: #2A2A27;
+  --color-surface-input: #3A3935;
+  --color-surface-disabled: #4A4945;
+
+  --color-primary-tint: #0E2E1B;
+  --color-secondary-tint: #2A1A06;
+  --color-tertiary-tint: #0A1E35;
+
+  --color-error-bg: #2A0E0E;
+  --color-error-border: #5A1E1E;
+
+  --color-success-bg: #0A1F12;
+  --color-success-border: #1A4A2A;
+
+  --color-warning-bg: #251505;
+  --color-warning-border: #5A3010;
+
+  --color-info-bg: #081525;
+  --color-info-border: #153055;
+}
+
+.dark body {
+  background: var(--color-surface-bg);
+  color: var(--color-neutral-700);
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
