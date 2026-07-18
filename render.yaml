@@ -4,8 +4,8 @@ services:
     env: node
     region: frankfurt
     plan: free
-    buildCommand: npm install && npx prisma generate && npm run build -w apps/api
-    startCommand: node apps/api/dist/main
+    buildCommand: npm install && (cd apps/api && npx prisma generate)
+    startCommand: npm run start:prod -w apps/api
     healthCheckPath: /health
     envVars:
       - key: NODE_ENV
