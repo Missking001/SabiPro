@@ -12,7 +12,7 @@
     "dev": "nest start --watch",
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
-    "start:prod": "node dist/main.js",
+    "start:prod": "node -e \"console.log('NODE_OK'); console.log('CWD:', process.cwd()); console.log('HAS_DB:', !!process.env.DATABASE_URL); console.log('HAS_JWT:', !!process.env.JWT_SECRET); var fs=require('fs'); console.log('DIST_EXISTS:', fs.existsSync('dist/main.js')); console.log('PRISMA_EXISTS:', fs.existsSync('node_modules/@prisma/client')); console.log('TSX_EXISTS:', fs.existsSync('../node_modules/tsx/dist/cli.mjs'))\"",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
     "test": "jest",
     "test:watch": "jest --watch",
