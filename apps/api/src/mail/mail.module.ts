@@ -1,4 +1,4 @@
-import { Global, Module, OnModuleInit } from '@nestjs/common';
+import { Global, Module } from '@nestjs/common';
 import { MailService } from './mail.service';
 
 @Global()
@@ -6,9 +6,4 @@ import { MailService } from './mail.service';
   providers: [MailService],
   exports: [MailService],
 })
-export class MailModule implements OnModuleInit {
-  constructor(private readonly mailService: MailService) {}
-  async onModuleInit() {
-    await this.mailService.onModuleInit();
-  }
-}
+export class MailModule {}
