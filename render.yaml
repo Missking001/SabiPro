@@ -1,0 +1,40 @@
+services:
+  - type: web
+    name: sabipro-api
+    env: node
+    region: frankfurt
+    plan: free
+    buildCommand: npm install && npx prisma generate && npm run build -w apps/api
+    startCommand: node apps/api/dist/main
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: ALLOWED_ORIGIN
+        value: https://sabipro-web.vercel.app
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: MAIL_HOST
+        sync: false
+      - key: MAIL_PORT
+        sync: false
+      - key: MAIL_USER
+        sync: false
+      - key: MAIL_PASS
+        sync: false
+      - key: FLW_PUBLIC_KEY
+        sync: false
+      - key: FLW_SECRET_KEY
+        sync: false
+      - key: FLW_WEBHOOK_SECRET
+        sync: false
+      - key: PLATFORM_FEE_PERCENT
+        sync: false

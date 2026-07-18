@@ -8,7 +8,7 @@ node_modules/
 
 # Build outputs
 .next/
-dist/
+/dist/
 
 # TypeScript
 *.tsbuildinfo
