@@ -17,9 +17,11 @@ export default function SearchPage() {
     const params = new URLSearchParams(window.location.search);
     const trade = params.get('tradeCategory') || '';
     const loc = params.get('location') || '';
+    const q = params.get('q') || '';
+    setSearch(q);
     setTradeCategory(trade);
     setLocation(loc);
-    searchProviders({ tradeCategory: trade || undefined, location: loc || undefined }).catch(() => {});
+    searchProviders({ search: q || undefined, tradeCategory: trade || undefined, location: loc || undefined }).catch(() => {});
   }, []);
 
   function handleSearch(e: React.FormEvent) {
