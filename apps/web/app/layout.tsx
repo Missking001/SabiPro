@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { Navbar } from "@/components/layout/Navbar";
-import { Footer } from "@/components/layout/Footer";
+import { ConditionalFooter } from "@/components/layout/ConditionalFooter";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { AuthProvider } from "@/components/AuthProvider";
 
@@ -23,7 +23,7 @@ export default function RootLayout({
           <Navbar />
           <main className="min-h-screen bg-surface-bg">{children}</main>
           <BottomNav />
-          <Footer />
+          <ConditionalFooter />
         </AuthProvider>
       </body>
     </html>
