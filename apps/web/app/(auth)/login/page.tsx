@@ -96,9 +96,7 @@ export default function LoginPage() {
     }
   }
 
-  function handleRoleSelect(roleEmail: string) {
-    setEmail(roleEmail);
-    setPassword('Password123!');
+  function handleRoleSelect() {
     setRoleSelected(true);
     setError('');
     setIsUnverified(false);
@@ -268,21 +266,21 @@ export default function LoginPage() {
             <div className="flex gap-3 pt-4">
               <button
                 type="button"
-                onClick={() => handleRoleSelect('chioma@sabipro.com')}
+                onClick={handleRoleSelect}
                 className="flex-1 text-center py-2.5 border border-surface-input hover:bg-surface-bg rounded-[14px] text-small font-medium text-neutral-900 transition-colors"
               >
                 Consumer
               </button>
               <button
                 type="button"
-                onClick={() => handleRoleSelect('emeka@sabipro.com')}
+                onClick={handleRoleSelect}
                 className="flex-1 text-center py-2.5 border border-surface-input hover:bg-surface-bg rounded-[14px] text-small font-medium text-neutral-900 transition-colors"
               >
                 Provider
               </button>
               <button
                 type="button"
-                onClick={() => handleRoleSelect('admin@sabipro.com')}
+                onClick={handleRoleSelect}
                 className="flex-1 text-center py-2.5 border border-surface-input hover:bg-surface-bg rounded-[14px] text-small font-medium text-neutral-900 transition-colors"
               >
                 Admin
