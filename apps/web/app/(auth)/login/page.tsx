@@ -281,7 +281,8 @@ export default function LoginPage() {
             <Button
               type="submit"
               isLoading={isLoading}
-              className="w-full !bg-primary-base hover:!bg-primary-deep !text-neutral-0 !rounded-[14px] mt-2"
+              disabled={!email.trim() || !password}
+              className="w-full !bg-primary-base hover:!bg-primary-deep !text-neutral-0 !rounded-[14px] mt-2 disabled:!bg-surface-disabled disabled:!cursor-not-allowed"
             >
               Log in
             </Button>

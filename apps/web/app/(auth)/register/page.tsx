@@ -296,7 +296,8 @@ export default function RegisterPage() {
             <Button
               type="submit"
               isLoading={isLoading}
-              className="w-full !bg-primary-base hover:!bg-primary-deep !text-neutral-0 !rounded-[14px]"
+              disabled={!agreedToTerms}
+              className="w-full !bg-primary-base hover:!bg-primary-deep !text-neutral-0 !rounded-[14px] disabled:!bg-surface-disabled disabled:!cursor-not-allowed"
             >
               Create account
             </Button>
