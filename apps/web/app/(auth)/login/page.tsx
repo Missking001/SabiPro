@@ -35,6 +35,7 @@ export default function LoginPage() {
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [roleSelected, setRoleSelected] = useState(false);
   const [isUnverified, setIsUnverified] = useState(false);
   const [resendMsg, setResendMsg] = useState('');
   const [registeredMsg, setRegisteredMsg] = useState('');
@@ -98,6 +99,7 @@ export default function LoginPage() {
   async function handleQuickLogin(roleEmail: string) {
     setEmail(roleEmail);
     setPassword('Password123!');
+    setRoleSelected(true);
     setError('');
     setIsUnverified(false);
     setResendMsg('');
@@ -281,7 +283,7 @@ export default function LoginPage() {
             <Button
               type="submit"
               isLoading={isLoading}
-              disabled={!email.trim() || !password}
+              disabled={!email.trim() || !password || !roleSelected}
               className="w-full !bg-primary-base hover:!bg-primary-deep !text-neutral-0 !rounded-[14px] mt-2 disabled:!bg-surface-disabled disabled:!cursor-not-allowed"
             >
               Log in
