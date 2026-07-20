@@ -96,39 +96,14 @@ export default function LoginPage() {
     }
   }
 
-  async function handleQuickLogin(roleEmail: string) {
+  function handleRoleSelect(roleEmail: string) {
     setEmail(roleEmail);
     setPassword('Password123!');
     setRoleSelected(true);
     setError('');
     setIsUnverified(false);
     setResendMsg('');
-    setIsLoading(true);
-
-    try {
-      const result = await login(roleEmail, 'Password123!');
-
-      if (result?.error) {
-        const msg = result.error;
-        if (msg.includes('verify your email')) setIsUnverified(true);
-        setError(msg);
-        return;
-      }
-
-      // Wait for the session to be established before navigating
-      const session = await getSession();
-      if (!session?.user) {
-        setError('Session could not be established. Please try again.');
-        return;
-      }
-
-      router.push('/dashboard');
-      router.refresh();
-    } catch (err: any) {
-      setError(err.message || 'Invalid email or password');
-    } finally {
-      setIsLoading(false);
-    }
+    setFieldErrors({});
   }
 
   async function handleResend() {
@@ -293,21 +268,21 @@ export default function LoginPage() {
             <div className="flex gap-3 pt-4">
               <button
                 type="button"
-                onClick={() => handleQuickLogin('chioma@sabipro.com')}
+                onClick={() => handleRoleSelect('chioma@sabipro.com')}
                 className="flex-1 text-center py-2.5 border border-surface-input hover:bg-surface-bg rounded-[14px] text-small font-medium text-neutral-900 transition-colors"
               >
                 Consumer
               </button>
               <button
                 type="button"
-                onClick={() => handleQuickLogin('emeka@sabipro.com')}
+                onClick={() => handleRoleSelect('emeka@sabipro.com')}
                 className="flex-1 text-center py-2.5 border border-surface-input hover:bg-surface-bg rounded-[14px] text-small font-medium text-neutral-900 transition-colors"
               >
                 Provider
               </button>
               <button
                 type="button"
-                onClick={() => handleQuickLogin('admin@sabipro.com')}
+                onClick={() => handleRoleSelect('admin@sabipro.com')}
                 className="flex-1 text-center py-2.5 border border-surface-input hover:bg-surface-bg rounded-[14px] text-small font-medium text-neutral-900 transition-colors"
               >
                 Admin
