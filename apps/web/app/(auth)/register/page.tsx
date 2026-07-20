@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
+import { getSession } from 'next-auth/react';
 import { Button, StatusBanner } from '@/components/ui';
 import { api, ApiClientError } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
@@ -80,9 +81,12 @@ export default function RegisterPage() {
 
       const loginResult = await login(email.trim(), password);
       if (loginResult?.ok) {
-        router.push('/dashboard');
-        router.refresh();
-        return;
+        const session = await getSession();
+        if (session?.user) {
+          router.push('/dashboard');
+          router.refresh();
+          return;
+        }
       }
 
       router.push('/login?registered=true');

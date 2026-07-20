@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Button, StatusBanner } from '@/components/ui';
+import { getSession } from 'next-auth/react';
 import { api, ApiClientError } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -78,6 +79,13 @@ export default function LoginPage() {
         return;
       }
 
+      // Wait for the session to be established before navigating
+      const session = await getSession();
+      if (!session?.user) {
+        setError('Session could not be established. Please try again.');
+        return;
+      }
+
       router.push('/dashboard');
       router.refresh();
     } catch (err: any) {
@@ -102,6 +110,13 @@ export default function LoginPage() {
         const msg = result.error;
         if (msg.includes('verify your email')) setIsUnverified(true);
         setError(msg);
+        return;
+      }
+
+      // Wait for the session to be established before navigating
+      const session = await getSession();
+      if (!session?.user) {
+        setError('Session could not be established. Please try again.');
         return;
       }
 
