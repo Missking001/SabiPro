@@ -5,12 +5,41 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Button, StatusBanner } from '@/components/ui';
-import { api } from '@/lib/api';
+import { api, ApiClientError } from '@/lib/api';
+import { useAuth } from '@/hooks/useAuth';
 
 const CITIES = ['Lagos', 'Abuja'];
 
+interface FieldErrors {
+  name?: string;
+  phone?: string;
+  email?: string;
+  city?: string;
+  terms?: string;
+}
+
+function validateName(name: string): string | undefined {
+  if (!name.trim()) return 'Full name is required';
+  if (name.trim().length < 2) return 'Name must be at least 2 characters';
+  return undefined;
+}
+
+function validatePhone(phone: string): string | undefined {
+  if (!phone.trim()) return 'Phone number is required';
+  const digits = phone.replace(/\D/g, '');
+  if (digits.length < 10) return 'Please enter a valid phone number';
+  return undefined;
+}
+
+function validateEmail(email: string): string | undefined {
+  if (!email.trim()) return 'Email address is required';
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) return 'Please enter a valid email address';
+  return undefined;
+}
+
 export default function RegisterPage() {
   const router = useRouter();
+  const { login } = useAuth();
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
@@ -18,27 +47,51 @@ export default function RegisterPage() {
   const [showCityDropdown, setShowCityDropdown] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [role, setRole] = useState<'CONSUMER' | 'PROVIDER'>('CONSUMER');
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+
+  function validate(): boolean {
+    const errors: FieldErrors = {
+      name: validateName(name),
+      phone: validatePhone(phone),
+      email: validateEmail(email),
+      terms: agreedToTerms ? undefined : 'Please agree to the terms of service and privacy policy',
+    };
+    setFieldErrors(errors);
+    return !errors.name && !errors.phone && !errors.email && !errors.terms;
+  }
+
+  function clearFieldError(field: keyof FieldErrors) {
+    setFieldErrors((prev) => ({ ...prev, [field]: undefined }));
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError('');
-    setSuccess('');
-    if (!agreedToTerms) {
-      setError('Please agree to the terms of service and privacy policy');
-      return;
-    }
+
+    if (!validate()) return;
+
     setIsLoading(true);
 
     try {
-      const password = 'TempPass123!'; // Temporary password — user will set via forgot-password
-      const res = await api.auth.register({ name, email, password, role, phone, city });
-      setSuccess(res?.data?.message || 'Registration successful!');
-      setTimeout(() => router.push('/login'), 2000);
+      const password = 'TempPass123!';
+      await api.auth.register({ name: name.trim(), email: email.trim(), password, role, phone: phone.trim(), city });
+
+      const loginResult = await login(email.trim(), password);
+      if (loginResult?.ok) {
+        router.push('/dashboard');
+        router.refresh();
+        return;
+      }
+
+      router.push('/login?registered=true');
     } catch (err: any) {
-      setError(err.message || 'Registration failed');
+      if (err instanceof ApiClientError) {
+        setError(err.message);
+      } else {
+        setError(err.message || 'Registration failed');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -72,7 +125,6 @@ export default function RegisterPage() {
       <div className="w-full max-w-md">
         <div className="bg-neutral-0 border border-surface-border rounded-card p-6 md:p-8">
           {error && <StatusBanner variant="error" className="mb-4">{error}</StatusBanner>}
-          {success && <StatusBanner variant="success" className="mb-4">{success}</StatusBanner>}
 
           <form onSubmit={handleSubmit} className="space-y-5">
             {/* I WANT TO... */}
@@ -131,10 +183,15 @@ export default function RegisterPage() {
                 type="text"
                 placeholder="Your full name"
                 value={name}
-                onChange={(e) => setName(e.target.value)}
+                onChange={(e) => { setName(e.target.value); clearFieldError('name'); }}
                 required
-                className="w-full bg-neutral-0 border border-surface-input rounded-component py-3 px-4 text-body text-neutral-900 placeholder:text-neutral-500 min-h-[44px] focus:outline-none focus:border-primary-base focus:ring-1 focus:ring-primary-base"
+                className={`w-full bg-neutral-0 border rounded-component py-3 px-4 text-body text-neutral-900 placeholder:text-neutral-500 min-h-[44px] focus:outline-none focus:ring-1 ${
+                  fieldErrors.name ? 'border-error-base focus:border-error-base focus:ring-error-base' : 'border-surface-input focus:border-primary-base focus:ring-primary-base'
+                }`}
               />
+              {fieldErrors.name && (
+                <p className="text-caption text-error-base mt-0.5">{fieldErrors.name}</p>
+              )}
             </div>
 
             {/* Phone number */}
@@ -144,10 +201,15 @@ export default function RegisterPage() {
                 type="tel"
                 placeholder="+234 XXX XXX XXXX"
                 value={phone}
-                onChange={(e) => setPhone(e.target.value)}
+                onChange={(e) => { setPhone(e.target.value); clearFieldError('phone'); }}
                 required
-                className="w-full bg-neutral-0 border border-surface-input rounded-component py-3 px-4 text-body text-neutral-900 placeholder:text-neutral-500 min-h-[44px] focus:outline-none focus:border-primary-base focus:ring-1 focus:ring-primary-base"
+                className={`w-full bg-neutral-0 border rounded-component py-3 px-4 text-body text-neutral-900 placeholder:text-neutral-500 min-h-[44px] focus:outline-none focus:ring-1 ${
+                  fieldErrors.phone ? 'border-error-base focus:border-error-base focus:ring-error-base' : 'border-surface-input focus:border-primary-base focus:ring-primary-base'
+                }`}
               />
+              {fieldErrors.phone && (
+                <p className="text-caption text-error-base mt-0.5">{fieldErrors.phone}</p>
+              )}
             </div>
 
             {/* Email address */}
@@ -157,10 +219,15 @@ export default function RegisterPage() {
                 type="email"
                 placeholder="you@example.com"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => { setEmail(e.target.value); clearFieldError('email'); }}
                 required
-                className="w-full bg-neutral-0 border border-surface-input rounded-component py-3 px-4 text-body text-neutral-900 placeholder:text-neutral-500 min-h-[44px] focus:outline-none focus:border-primary-base focus:ring-1 focus:ring-primary-base"
+                className={`w-full bg-neutral-0 border rounded-component py-3 px-4 text-body text-neutral-900 placeholder:text-neutral-500 min-h-[44px] focus:outline-none focus:ring-1 ${
+                  fieldErrors.email ? 'border-error-base focus:border-error-base focus:ring-error-base' : 'border-surface-input focus:border-primary-base focus:ring-primary-base'
+                }`}
               />
+              {fieldErrors.email && (
+                <p className="text-caption text-error-base mt-0.5">{fieldErrors.email}</p>
+              )}
             </div>
 
             {/* City */}
@@ -200,20 +267,25 @@ export default function RegisterPage() {
             </div>
 
             {/* Agree to terms */}
-            <div className="flex items-start gap-3">
-              <input
-                type="checkbox"
-                id="terms"
-                checked={agreedToTerms}
-                onChange={(e) => setAgreedToTerms(e.target.checked)}
-                className="mt-1 w-4 h-4 border-surface-input rounded accent-primary-base"
-              />
-              <label htmlFor="terms" className="text-small text-neutral-700 leading-relaxed">
-                I agree to{' '}
-                <Link href="/terms" className="text-primary-base hover:text-primary-hover underline">SabiPro terms of service</Link>
-                {' '}and{' '}
-                <Link href="/privacy" className="text-primary-base hover:text-primary-hover underline">privacy policy</Link>
-              </label>
+            <div className="flex flex-col gap-1">
+              <div className="flex items-start gap-3">
+                <input
+                  type="checkbox"
+                  id="terms"
+                  checked={agreedToTerms}
+                  onChange={(e) => { setAgreedToTerms(e.target.checked); clearFieldError('terms'); }}
+                  className="mt-1 w-4 h-4 border-surface-input rounded accent-primary-base"
+                />
+                <label htmlFor="terms" className="text-small text-neutral-700 leading-relaxed">
+                  I agree to{' '}
+                  <Link href="/terms" className="text-primary-base hover:text-primary-hover underline">SabiPro terms of service</Link>
+                  {' '}and{' '}
+                  <Link href="/privacy" className="text-primary-base hover:text-primary-hover underline">privacy policy</Link>
+                </label>
+              </div>
+              {fieldErrors.terms && (
+                <p className="text-caption text-error-base ml-7">{fieldErrors.terms}</p>
+              )}
             </div>
 
             {/* Create account button */}

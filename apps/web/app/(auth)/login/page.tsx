@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -8,26 +8,68 @@ import { Button, StatusBanner } from '@/components/ui';
 import { api, ApiClientError } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
 
+interface FieldErrors {
+  email?: string;
+  password?: string;
+}
+
+function validateEmail(email: string): string | undefined {
+  if (!email.trim()) return 'Email address is required';
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) return 'Please enter a valid email address';
+  return undefined;
+}
+
+function validatePassword(password: string): string | undefined {
+  if (!password) return 'Password is required';
+  if (password.length < 6) return 'Password must be at least 6 characters';
+  return undefined;
+}
+
 export default function LoginPage() {
   const router = useRouter();
   const { login } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isUnverified, setIsUnverified] = useState(false);
   const [resendMsg, setResendMsg] = useState('');
+  const [registeredMsg, setRegisteredMsg] = useState('');
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('registered') === 'true') {
+      setRegisteredMsg('Account created successfully! Verify your email to log in.');
+    }
+  }, []);
+
+  function validate(): boolean {
+    const errors: FieldErrors = {
+      email: validateEmail(email),
+      password: validatePassword(password),
+    };
+    setFieldErrors(errors);
+    return !errors.email && !errors.password;
+  }
+
+  function clearFieldError(field: keyof FieldErrors) {
+    setFieldErrors((prev) => ({ ...prev, [field]: undefined }));
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError('');
     setIsUnverified(false);
     setResendMsg('');
+
+    if (!validate()) return;
+
     setIsLoading(true);
 
     try {
-      const result = await login(email, password);
+      const result = await login(email.trim(), password);
 
       if (result?.error) {
         const msg = result.error;
@@ -117,6 +159,10 @@ export default function LoginPage() {
           <h1 className="text-[28px] font-medium text-neutral-900 text-center mb-1.5">Welcome back</h1>
           <p className="text-small text-neutral-500 text-center mb-8">Log in to your SabiPro account</p>
 
+          {registeredMsg && (
+            <StatusBanner variant="success" className="mb-6">{registeredMsg}</StatusBanner>
+          )}
+
           {error && (
             <StatusBanner variant="error" className="mb-6">
               {error}
@@ -156,11 +202,16 @@ export default function LoginPage() {
                   id="login-email"
                   placeholder="you@example.com"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => { setEmail(e.target.value); clearFieldError('email'); }}
                   required
-                  className="w-full bg-neutral-0 border border-surface-input rounded-[14px] py-3 pl-11 pr-4 text-body text-neutral-900 placeholder:text-neutral-500 min-h-[44px] focus:outline-none focus:border-primary-base focus:ring-1 focus:ring-primary-base disabled:bg-surface-bg disabled:cursor-not-allowed"
+                  className={`w-full bg-neutral-0 border rounded-[14px] py-3 pl-11 pr-4 text-body text-neutral-900 placeholder:text-neutral-500 min-h-[44px] focus:outline-none focus:ring-1 disabled:bg-surface-bg disabled:cursor-not-allowed ${
+                    fieldErrors.email ? 'border-error-base focus:border-error-base focus:ring-error-base' : 'border-surface-input focus:border-primary-base focus:ring-primary-base'
+                  }`}
                 />
               </div>
+              {fieldErrors.email && (
+                <p className="text-caption text-error-base mt-0.5">{fieldErrors.email}</p>
+              )}
             </div>
 
             {/* Password Field with Icon */}
@@ -182,9 +233,11 @@ export default function LoginPage() {
                   id="login-password"
                   placeholder="********"
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) => { setPassword(e.target.value); clearFieldError('password'); }}
                   required
-                  className="w-full bg-neutral-0 border border-surface-input rounded-[14px] py-3 pl-11 pr-11 text-body text-neutral-900 placeholder:text-neutral-500 min-h-[44px] focus:outline-none focus:border-primary-base focus:ring-1 focus:ring-primary-base disabled:bg-surface-bg disabled:cursor-not-allowed"
+                  className={`w-full bg-neutral-0 border rounded-[14px] py-3 pl-11 pr-11 text-body text-neutral-900 placeholder:text-neutral-500 min-h-[44px] focus:outline-none focus:ring-1 disabled:bg-surface-bg disabled:cursor-not-allowed ${
+                    fieldErrors.password ? 'border-error-base focus:border-error-base focus:ring-error-base' : 'border-surface-input focus:border-primary-base focus:ring-primary-base'
+                  }`}
                 />
                 <button
                   type="button"
@@ -204,6 +257,9 @@ export default function LoginPage() {
                   )}
                 </button>
               </div>
+              {fieldErrors.password && (
+                <p className="text-caption text-error-base mt-0.5">{fieldErrors.password}</p>
+              )}
             </div>
 
             {/* Log in Button */}
