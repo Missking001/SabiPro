@@ -56,7 +56,9 @@ export class AuthService {
       select: { id: true, name: true, email: true, role: true, createdAt: true },
     });
 
-    await this.mailService.sendVerificationEmail(user.email, user.name, verificationToken);
+    this.mailService.sendVerificationEmail(user.email, user.name, verificationToken).catch((err) => {
+      this.logger.error(`Failed to send verification email to ${user.email}: ${err.message}`);
+    });
 
     this.logger.log(`User registered: ${user.email}`);
 
@@ -159,7 +161,9 @@ export class AuthService {
       },
     });
 
-    await this.mailService.sendVerificationEmail(user.email, user.name, verificationToken);
+    this.mailService.sendVerificationEmail(user.email, user.name, verificationToken).catch((err) => {
+      this.logger.error(`Failed to resend verification email to ${user.email}: ${err.message}`);
+    });
 
     this.logger.log(`Verification email resent: ${user.email}`);
 
@@ -185,7 +189,9 @@ export class AuthService {
       },
     });
 
-    await this.mailService.sendPasswordResetEmail(user.email, user.name, resetToken);
+    this.mailService.sendPasswordResetEmail(user.email, user.name, resetToken).catch((err) => {
+      this.logger.error(`Failed to send password reset email to ${user.email}: ${err.message}`);
+    });
 
     this.logger.log(`Password reset requested for: ${email}`);
 
