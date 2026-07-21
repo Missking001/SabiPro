@@ -1,7 +1,7 @@
 import NextAuth, { type NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://sabipro.onrender.com';
 
 export const authOptions: NextAuthOptions = {
   providers: [

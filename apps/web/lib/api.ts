@@ -9,7 +9,7 @@ import type {
   ApiResponse,
 } from '@/types';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://sabipro.onrender.com';
 
 /**
  * Get the access token from NextAuth session.
