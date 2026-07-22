@@ -102,7 +102,7 @@ export const api = {
         body: JSON.stringify({ email }),
       }),
     adminRegister: (data: { code: string }) =>
-      request<{ token: string }>('/api/auth/admin-register', {
+      request<{ token: string; user: { id: string; name: string; email: string; role: string } }>('/api/auth/admin-register', {
         method: 'POST',
         body: JSON.stringify(data),
       }),

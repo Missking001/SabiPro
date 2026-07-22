@@ -52,6 +52,12 @@ export declare class AuthService {
     }>;
     adminRegister(dto: AdminRegisterDto): Promise<{
         token: string;
+        user: {
+            id: string;
+            name: string;
+            email: string;
+            role: import("@prisma/client").$Enums.Role;
+        };
     }>;
     private recordFailedAttempt;
 }

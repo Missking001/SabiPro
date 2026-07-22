@@ -12,13 +12,29 @@ export interface AuthUser {
   avatarUrl?: string | null;
 }
 
+function getAdminUser(): AuthUser | null {
+  if (typeof window === 'undefined') return null;
+  const token = sessionStorage.getItem('sabipro_token');
+  const raw = sessionStorage.getItem('sabipro_admin_user');
+  if (!token || !raw) return null;
+  try {
+    const parsed = JSON.parse(raw);
+    return { ...parsed, accessToken: token };
+  } catch {
+    return null;
+  }
+}
+
 export function useAuth() {
   const { data: session, status } = useSession();
   const router = useRouter();
 
-  const user = session?.user as AuthUser | undefined;
-  const isLoading = status === 'loading';
-  const isAuthenticated = status === 'authenticated';
+  const adminUser = getAdminUser();
+  const sessionUser = session?.user as AuthUser | undefined;
+
+  const user = sessionUser || adminUser || undefined;
+  const isLoading = status === 'loading' && !adminUser;
+  const isAuthenticated = status === 'authenticated' || !!adminUser;
 
   const isConsumer = user?.role === 'CONSUMER';
   const isProvider = user?.role === 'PROVIDER';
@@ -34,6 +50,10 @@ export function useAuth() {
   }
 
   async function logout() {
+    if (getAdminUser()) {
+      sessionStorage.removeItem('sabipro_token');
+      sessionStorage.removeItem('sabipro_admin_user');
+    }
     await signOut({ redirect: false });
     router.push('/');
   }

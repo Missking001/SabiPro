@@ -88,6 +88,9 @@ export default function LoginPage() {
         const res = await api.auth.adminRegister({ code: adminCode.trim() });
         if (res.data?.token) {
           sessionStorage.setItem('sabipro_token', res.data.token);
+          if (res.data?.user) {
+            sessionStorage.setItem('sabipro_admin_user', JSON.stringify(res.data.user));
+          }
         }
         router.push('/admin/dashboard');
         router.refresh();

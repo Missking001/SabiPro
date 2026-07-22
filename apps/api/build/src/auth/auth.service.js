@@ -264,7 +264,15 @@ let AuthService = AuthService_1 = class AuthService {
             role: admin.role,
         });
         this.logger.log(`Admin login: ${admin.email}`);
-        return { token };
+        return {
+            token,
+            user: {
+                id: admin.id,
+                name: admin.name,
+                email: admin.email,
+                role: admin.role,
+            },
+        };
     }
     async recordFailedAttempt(key, user) {
         const entry = this.loginAttempts.get(key) || { count: 0, lockedUntil: null };

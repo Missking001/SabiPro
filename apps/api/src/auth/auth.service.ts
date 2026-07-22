@@ -274,7 +274,15 @@ export class AuthService {
 
     this.logger.log(`Admin login: ${admin.email}`);
 
-    return { token };
+    return {
+      token,
+      user: {
+        id: admin.id,
+        name: admin.name,
+        email: admin.email,
+        role: admin.role,
+      },
+    };
   }
 
   private async recordFailedAttempt(key: string, user?: any) {
