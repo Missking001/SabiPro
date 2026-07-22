@@ -215,11 +215,12 @@ export default function LoginPage() {
                     </svg>
                   </div>
                   <input
-                    type="text"
+                    type="password"
                     id="admin-code"
                     placeholder="Enter admin code"
                     value={adminCode}
                     onChange={(e) => { setAdminCode(e.target.value); clearFieldError('adminCode'); }}
+                    autoComplete="off"
                     required
                     className={`w-full bg-neutral-0 border rounded-[14px] py-3 pl-11 pr-4 text-body text-neutral-900 placeholder:text-neutral-500 min-h-[44px] focus:outline-none focus:ring-1 ${
                       fieldErrors.adminCode ? 'border-error-base focus:border-error-base focus:ring-error-base' : 'border-surface-input focus:border-primary-base focus:ring-primary-base'
