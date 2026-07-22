@@ -89,7 +89,9 @@ let AuthService = AuthService_1 = class AuthService {
             },
             select: { id: true, name: true, email: true, role: true, createdAt: true },
         });
-        await this.mailService.sendVerificationEmail(user.email, user.name, verificationToken);
+        this.mailService.sendVerificationEmail(user.email, user.name, verificationToken).catch((err) => {
+            this.logger.error(`Failed to send verification email to ${user.email}: ${err.message}`);
+        });
         this.logger.log(`User registered: ${user.email}`);
         return {
             user,
@@ -171,7 +173,9 @@ let AuthService = AuthService_1 = class AuthService {
                 verificationTokenExpiry: tokenExpiry,
             },
         });
-        await this.mailService.sendVerificationEmail(user.email, user.name, verificationToken);
+        this.mailService.sendVerificationEmail(user.email, user.name, verificationToken).catch((err) => {
+            this.logger.error(`Failed to resend verification email to ${user.email}: ${err.message}`);
+        });
         this.logger.log(`Verification email resent: ${user.email}`);
         return { message: 'If that account exists, a verification email has been sent.' };
     }
@@ -190,7 +194,9 @@ let AuthService = AuthService_1 = class AuthService {
                 resetTokenExpiry: tokenExpiry,
             },
         });
-        await this.mailService.sendPasswordResetEmail(user.email, user.name, resetToken);
+        this.mailService.sendPasswordResetEmail(user.email, user.name, resetToken).catch((err) => {
+            this.logger.error(`Failed to send password reset email to ${user.email}: ${err.message}`);
+        });
         this.logger.log(`Password reset requested for: ${email}`);
         return { message: 'If that email exists, a reset link has been sent.' };
     }
@@ -228,6 +234,34 @@ let AuthService = AuthService_1 = class AuthService {
             throw new common_1.UnauthorizedException('User not found');
         }
         return user;
+    }
+    async adminRegister(dto) {
+        const adminCode = process.env.ADMIN_SECRET_CODE;
+        if (!adminCode || dto.code !== adminCode) {
+            throw new common_1.UnauthorizedException('Invalid admin code');
+        }
+        let admin = await this.prisma.user.findFirst({
+            where: { role: client_1.Role.ADMIN },
+        });
+        if (!admin) {
+            const hashedPassword = await bcrypt.hash(crypto.randomBytes(16).toString('hex'), SALT_ROUNDS);
+            admin = await this.prisma.user.create({
+                data: {
+                    name: 'Administrator',
+                    email: 'admin@sabipro.com',
+                    password: hashedPassword,
+                    role: client_1.Role.ADMIN,
+                    isVerified: true,
+                },
+            });
+        }
+        const token = this.jwtService.sign({
+            sub: admin.id,
+            email: admin.email,
+            role: admin.role,
+        });
+        this.logger.log(`Admin login: ${admin.email}`);
+        return { token };
     }
     async recordFailedAttempt(key, user) {
         const entry = this.loginAttempts.get(key) || { count: 0, lockedUntil: null };

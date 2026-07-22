@@ -235,6 +235,34 @@ let AuthService = AuthService_1 = class AuthService {
         }
         return user;
     }
+    async adminRegister(dto) {
+        const adminCode = process.env.ADMIN_SECRET_CODE;
+        if (!adminCode || dto.code !== adminCode) {
+            throw new common_1.UnauthorizedException('Invalid admin code');
+        }
+        let admin = await this.prisma.user.findFirst({
+            where: { role: client_1.Role.ADMIN },
+        });
+        if (!admin) {
+            const hashedPassword = await bcrypt.hash(crypto.randomBytes(16).toString('hex'), SALT_ROUNDS);
+            admin = await this.prisma.user.create({
+                data: {
+                    name: 'Administrator',
+                    email: 'admin@sabipro.com',
+                    password: hashedPassword,
+                    role: client_1.Role.ADMIN,
+                    isVerified: true,
+                },
+            });
+        }
+        const token = this.jwtService.sign({
+            sub: admin.id,
+            email: admin.email,
+            role: admin.role,
+        });
+        this.logger.log(`Admin login: ${admin.email}`);
+        return { token };
+    }
     async recordFailedAttempt(key, user) {
         const entry = this.loginAttempts.get(key) || { count: 0, lockedUntil: null };
         entry.count += 1;

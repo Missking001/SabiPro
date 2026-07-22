@@ -24,9 +24,9 @@ export declare class AdminService {
         id: string;
         createdAt: Date;
         status: import("@prisma/client").$Enums.FlagStatus;
+        reason: string | null;
         targetId: string;
         targetType: import("@prisma/client").$Enums.FlagTarget;
-        reason: string | null;
         resolvedBy: string | null;
         resolvedAt: Date | null;
         reportedBy: string;
@@ -52,10 +52,10 @@ export declare class AdminService {
         consumerId: string;
         providerId: string;
         status: import("@prisma/client").$Enums.TxStatus;
-        gatewayRef: string;
         amount: number;
-        currency: string;
         inquiryId: string | null;
+        gatewayRef: string;
+        currency: string;
         gatewayStatus: string;
         payoutStatus: import("@prisma/client").$Enums.PayoutStatus;
         payoutReleasedAt: Date | null;

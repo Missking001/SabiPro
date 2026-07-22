@@ -23,3 +23,6 @@ export declare class ResetPasswordDto {
     token: string;
     password: string;
 }
+export declare class AdminRegisterDto {
+    code: string;
+}

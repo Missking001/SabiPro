@@ -60,6 +60,9 @@ let MailService = MailService_1 = class MailService {
                 port: parseInt(process.env.MAIL_PORT || '587', 10),
                 secure: false,
                 auth: { user: mailUser, pass: mailPass },
+                connectionTimeout: 5000,
+                greetingTimeout: 5000,
+                socketTimeout: 10000,
             });
             this.logger.log(`SMTP transport configured: ${mailHost} as ${mailUser}`);
         }

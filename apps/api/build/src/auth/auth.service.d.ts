@@ -1,7 +1,7 @@
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
 import { MailService } from '../mail/mail.service';
-import { RegisterDto, LoginDto, VerifyEmailDto, ForgotPasswordDto, ResetPasswordDto, ResendVerificationDto } from './dto/auth.dto';
+import { RegisterDto, LoginDto, VerifyEmailDto, ForgotPasswordDto, ResetPasswordDto, ResendVerificationDto, AdminRegisterDto } from './dto/auth.dto';
 export declare class AuthService {
     private readonly prisma;
     private readonly jwtService;
@@ -12,8 +12,8 @@ export declare class AuthService {
     register(dto: RegisterDto): Promise<{
         user: {
             id: string;
-            email: string;
             name: string;
+            email: string;
             role: import("@prisma/client").$Enums.Role;
             createdAt: Date;
         };
@@ -42,13 +42,16 @@ export declare class AuthService {
     }>;
     getMe(userId: string): Promise<{
         id: string;
-        email: string;
         name: string;
+        email: string;
         role: import("@prisma/client").$Enums.Role;
         avatarUrl: string | null;
         phone: string | null;
         isVerified: boolean;
         createdAt: Date;
+    }>;
+    adminRegister(dto: AdminRegisterDto): Promise<{
+        token: string;
     }>;
     private recordFailedAttempt;
 }
