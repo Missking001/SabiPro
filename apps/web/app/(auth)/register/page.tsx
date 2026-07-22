@@ -64,14 +64,6 @@ function validatePhone(phone: string): string | undefined {
   return undefined;
 }
 
-function formatPhone(digits: string): string {
-  const parts: string[] = [];
-  if (digits.length > 0) parts.push(digits.slice(0, 3));
-  if (digits.length > 3) parts.push(digits.slice(3, 7));
-  if (digits.length > 7) parts.push(digits.slice(7, 11));
-  return parts.join(' ');
-}
-
 function validateEmail(email: string): string | undefined {
   if (!email.trim()) return 'Email address is required';
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) return 'Please enter a valid email address';
@@ -247,11 +239,11 @@ export default function RegisterPage() {
               <div className={`flex items-center bg-neutral-0 border rounded-component min-h-[44px] focus-within:outline-none focus-within:ring-1 ${
                 fieldErrors.phone ? 'border-error-base focus-within:border-error-base focus-within:ring-error-base' : 'border-surface-input focus-within:border-primary-base focus-within:ring-primary-base'
               }`}>
-                <span className="pl-4 text-body text-neutral-900 font-medium select-none">+234 </span>
+                <span className="pl-4 text-body text-neutral-900 font-medium select-none">+234</span>
                 <input
                   type="tel"
-                  placeholder="XXX XXXX XXX"
-                  value={formatPhone(phone)}
+                  placeholder="XXX XXX XXXX"
+                  value={phone}
                   onChange={(e) => { const val = e.target.value.replace(/\D/g, ''); if (val.length <= 11) setPhone(val); clearFieldError('phone'); }}
                   required
                   className="flex-1 bg-transparent border-none py-3 pr-4 text-body text-neutral-900 placeholder:text-neutral-500 min-h-[44px] focus:outline-none"
