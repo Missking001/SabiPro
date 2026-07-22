@@ -6,6 +6,7 @@ import { Skeleton, Card } from '@/components/ui';
 import { api } from '@/lib/api';
 import { formatNaira } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
+import { useSidebar } from '@/components/admin/SidebarContext';
 
 interface DashboardStats {
   totalUsers: number;
@@ -101,6 +102,7 @@ function BarChart({
 
 export default function AdminDashboardPage() {
   const { user } = useAuth();
+  const { toggle: toggleSidebar } = useSidebar();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
@@ -183,7 +185,16 @@ export default function AdminDashboardPage() {
     <div>
       {/* Top header */}
       <div className="flex items-center justify-between mb-8">
-        <div />
+        <button
+          type="button"
+          onClick={toggleSidebar}
+          className="w-9 h-9 rounded-full bg-neutral-0 border border-surface-border flex items-center justify-center text-neutral-500 hover:text-neutral-700 transition-colors"
+          aria-label="Toggle sidebar"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+          </svg>
+        </button>
         <div className="flex items-center gap-4">
           {/* Notification bell */}
           <button

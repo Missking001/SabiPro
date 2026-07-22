@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
+import { useSidebar } from './SidebarContext';
 
 const navItems = [
   {
@@ -52,14 +53,10 @@ const navItems = [
   },
 ];
 
-interface AdminSidebarProps {
-  collapsed: boolean;
-  onToggle: () => void;
-}
-
-export function AdminSidebar({ collapsed, onToggle }: AdminSidebarProps) {
+export function AdminSidebar() {
   const pathname = usePathname();
   const { logout } = useAuth();
+  const { collapsed } = useSidebar();
 
   async function handleSignOut() {
     await logout();
@@ -72,32 +69,21 @@ export function AdminSidebar({ collapsed, onToggle }: AdminSidebarProps) {
       }`}
     >
       {/* Logo */}
-      <div className="p-4 border-b border-neutral-700 flex items-center justify-between">
-        {!collapsed && (
+      <div className="p-4 border-b border-neutral-700 flex items-center justify-center">
+        {!collapsed ? (
           <Link href="/admin/dashboard" className="flex items-center gap-2">
             <div className="w-8 h-8 bg-primary-base rounded-lg flex items-center justify-center">
               <span className="text-neutral-0 font-bold text-small">S</span>
             </div>
             <span className="text-small font-medium text-neutral-0">SabiPro</span>
           </Link>
-        )}
-        {collapsed && (
-          <Link href="/admin/dashboard" className="mx-auto">
+        ) : (
+          <Link href="/admin/dashboard">
             <div className="w-8 h-8 bg-primary-base rounded-lg flex items-center justify-center">
               <span className="text-neutral-0 font-bold text-small">S</span>
             </div>
           </Link>
         )}
-        <button
-          type="button"
-          onClick={onToggle}
-          className="text-neutral-500 hover:text-neutral-0 transition-colors p-1"
-          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
-          </svg>
-        </button>
       </div>
 
       {/* Navigation */}
