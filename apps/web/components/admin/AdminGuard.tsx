@@ -6,7 +6,7 @@ import { useAuth } from '@/hooks/useAuth';
 
 export function AdminGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const { user, isAuthenticated, isLoading, isAdmin } = useAuth();
+  const { isAuthenticated, isLoading, isAdmin } = useAuth();
 
   useEffect(() => {
     if (!isLoading && (!isAuthenticated || !isAdmin)) {
