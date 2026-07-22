@@ -37,6 +37,9 @@ export default function OnboardingPage() {
   const role = (session?.user as any)?.role || 'CONSUMER';
 
   function goToDashboard() {
+    if (avatar) {
+      localStorage.setItem('sabipro_avatar', avatar);
+    }
     router.push('/dashboard');
     router.refresh();
   }

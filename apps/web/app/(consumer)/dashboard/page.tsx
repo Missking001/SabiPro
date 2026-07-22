@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Skeleton, StatusBanner } from '@/components/ui';
@@ -151,8 +151,28 @@ export default function ConsumerDashboardPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [localAvatar, setLocalAvatar] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const stored = localStorage.getItem('sabipro_avatar');
+    if (stored) setLocalAvatar(stored);
+  }, []);
 
   const unreadCount = notifications.filter((n) => !n.isRead).length;
+
+  function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 1024 * 1024) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result as string;
+      setLocalAvatar(dataUrl);
+      localStorage.setItem('sabipro_avatar', dataUrl);
+    };
+    reader.readAsDataURL(file);
+  }
 
   const greeting = useMemo(() => getGreeting(), []);
 
@@ -340,8 +360,8 @@ export default function ConsumerDashboardPage() {
                 className="w-10 h-10 rounded-full bg-neutral-0/20 flex items-center justify-center overflow-hidden border-2 border-neutral-0/30"
                 id="dashboard-avatar-btn"
               >
-                {user?.avatarUrl ? (
-                  <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover" />
+                {localAvatar || user?.avatarUrl ? (
+                  <img src={localAvatar || user?.avatarUrl!} alt={user?.name || ''} className="w-full h-full object-cover" />
                 ) : (
                   <span className="text-neutral-0 text-small font-medium">
                     {firstName.charAt(0).toUpperCase()}
@@ -606,13 +626,30 @@ export default function ConsumerDashboardPage() {
             
             <div className="flex flex-col items-center text-center mt-4">
               {/* Large Avatar */}
-              <div className="w-20 h-20 rounded-full bg-primary-tint flex items-center justify-center text-display font-medium text-primary-deep mb-4 overflow-hidden border-2 border-primary-base/20">
-                {user?.avatarUrl ? (
-                  <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover" />
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="w-20 h-20 rounded-full bg-primary-tint flex items-center justify-center text-display font-medium text-primary-deep mb-4 overflow-hidden border-2 border-primary-base/20 relative group cursor-pointer"
+              >
+                {localAvatar || user?.avatarUrl ? (
+                  <img src={localAvatar || user?.avatarUrl!} alt={user?.name || ''} className="w-full h-full object-cover" />
                 ) : (
                   <span>{firstName.charAt(0).toUpperCase()}</span>
                 )}
-              </div>
+                <div className="absolute inset-0 bg-neutral-900/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-full">
+                  <svg className="w-6 h-6 text-neutral-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.16a15.53 15.53 0 01-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0z" />
+                  </svg>
+                </div>
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                className="hidden"
+                onChange={handleAvatarChange}
+              />
               
               <h2 className="text-subhead font-medium text-neutral-900">{user?.name}</h2>
               <p className="text-small text-neutral-500 mb-1">{user?.email}</p>
