@@ -236,8 +236,9 @@ let AuthService = AuthService_1 = class AuthService {
         return user;
     }
     async adminRegister(dto) {
-        const adminCode = process.env.ADMIN_SECRET_CODE;
-        if (!adminCode || dto.code !== adminCode) {
+        const adminCode = (process.env.ADMIN_SECRET_CODE || '').trim();
+        this.logger.log(`Admin login attempt — code provided: "${dto.code}", expected: "${adminCode}"`);
+        if (!adminCode || dto.code.trim() !== adminCode) {
             throw new common_1.UnauthorizedException('Invalid admin code');
         }
         let admin = await this.prisma.user.findFirst({

@@ -241,8 +241,9 @@ export class AuthService {
   }
 
   async adminRegister(dto: AdminRegisterDto) {
-    const adminCode = process.env.ADMIN_SECRET_CODE;
-    if (!adminCode || dto.code !== adminCode) {
+    const adminCode = (process.env.ADMIN_SECRET_CODE || '').trim();
+    this.logger.log(`Admin login attempt — code provided: "${dto.code}", expected: "${adminCode}"`);
+    if (!adminCode || dto.code.trim() !== adminCode) {
       throw new UnauthorizedException('Invalid admin code');
     }
 
