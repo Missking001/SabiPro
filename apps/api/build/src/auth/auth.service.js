@@ -236,9 +236,11 @@ let AuthService = AuthService_1 = class AuthService {
         return user;
     }
     async adminRegister(dto) {
-        const adminCode = (process.env.ADMIN_SECRET_CODE || '').trim();
-        this.logger.log(`Admin login attempt — code provided: "${dto.code}", expected: "${adminCode}"`);
-        if (!adminCode || dto.code.trim() !== adminCode) {
+        const adminCode = (process.env.ADMIN_SECRET_CODE || '').replace(/^["']|["']$/g, '').trim();
+        const trimmedCode = dto.code.trim();
+        this.logger.log(`Admin login attempt — provided length: ${trimmedCode.length}, env var length: ${adminCode.length}`);
+        if (!adminCode || trimmedCode !== adminCode) {
+            this.logger.warn(`Admin login failed — mismatch. Check that ADMIN_SECRET_CODE in Render env has no quotes.`);
             throw new common_1.UnauthorizedException('Invalid admin code');
         }
         let admin = await this.prisma.user.findFirst({
