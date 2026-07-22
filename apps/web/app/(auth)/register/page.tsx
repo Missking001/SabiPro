@@ -59,8 +59,9 @@ function validateName(name: string): string | undefined {
 }
 
 function validatePhone(phone: string): string | undefined {
-  if (!phone) return 'Phone number is required';
-  if (phone.length < 10 || phone.length > 11) return 'Please enter a valid phone number';
+  if (!phone.trim()) return 'Phone number is required';
+  const digits = phone.replace(/\D/g, '');
+  if (digits.length < 10) return 'Please enter a valid phone number';
   return undefined;
 }
 
@@ -112,7 +113,7 @@ export default function RegisterPage() {
     setIsLoading(true);
 
     try {
-      await api.auth.register({ name: name.trim(), email: email.trim(), password, role, phone: `+234${phone}`, city });
+      await api.auth.register({ name: name.trim(), email: email.trim(), password, role, phone: phone.trim(), city });
 
       const loginResult = await login(email.trim(), password);
       if (loginResult?.ok) {
@@ -236,19 +237,16 @@ export default function RegisterPage() {
             {/* Phone number */}
             <div className="flex flex-col gap-1.5">
               <label className="text-small font-medium text-neutral-700">Phone number</label>
-              <div className={`flex items-center bg-neutral-0 border rounded-component min-h-[44px] focus-within:outline-none focus-within:ring-1 ${
-                fieldErrors.phone ? 'border-error-base focus-within:border-error-base focus-within:ring-error-base' : 'border-surface-input focus-within:border-primary-base focus-within:ring-primary-base'
-              }`}>
-                <span className="pl-4 text-body text-neutral-900 font-medium select-none">+234</span>
-                <input
-                  type="tel"
-                  placeholder="XXX XXX XXXX"
-                  value={phone}
-                  onChange={(e) => { const val = e.target.value.replace(/\D/g, ''); if (val.length <= 11) setPhone(val); clearFieldError('phone'); }}
-                  required
-                  className="flex-1 bg-transparent border-none py-3 pr-4 text-body text-neutral-900 placeholder:text-neutral-500 min-h-[44px] focus:outline-none"
-                />
-              </div>
+              <input
+                type="tel"
+                placeholder="+234 XXX XXX XXXX"
+                value={phone}
+                onChange={(e) => { setPhone(e.target.value); clearFieldError('phone'); }}
+                required
+                className={`w-full bg-neutral-0 border rounded-component py-3 px-4 text-body text-neutral-900 placeholder:text-neutral-500 min-h-[44px] focus:outline-none focus:ring-1 ${
+                  fieldErrors.phone ? 'border-error-base focus:border-error-base focus:ring-error-base' : 'border-surface-input focus:border-primary-base focus:ring-primary-base'
+                }`}
+              />
               {fieldErrors.phone && (
                 <p className="text-caption text-error-base mt-0.5">{fieldErrors.phone}</p>
               )}
