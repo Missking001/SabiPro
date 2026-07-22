@@ -303,15 +303,15 @@ export default function RegisterPage() {
                 </button>
               </div>
               {visibleRequirements.length > 0 && (
-                <div className="flex flex-col gap-1 mt-1">
+                <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1">
                   {visibleRequirements.map((req) => (
-                    <p
+                    <span
                       key={req.key}
-                      className={`text-caption flex items-center gap-1.5 ${
+                      className={`text-caption flex items-center gap-1 ${
                         req.met ? 'text-success-base' : 'text-neutral-500'
                       }`}
                     >
-                      <svg className={`w-3.5 h-3.5 ${req.met ? 'text-success-base' : 'text-neutral-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+                      <svg className={`w-3 h-3 ${req.met ? 'text-success-base' : 'text-neutral-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
                         {req.met ? (
                           <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
                         ) : (
@@ -319,7 +319,7 @@ export default function RegisterPage() {
                         )}
                       </svg>
                       {req.label}
-                    </p>
+                    </span>
                   ))}
                 </div>
               )}
