@@ -20,6 +20,7 @@ import {
   ForgotPasswordDto,
   ResetPasswordDto,
   ResendVerificationDto,
+  AdminRegisterDto,
 } from './dto/auth.dto';
 
 @Controller('api/auth')
@@ -62,6 +63,12 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   async resetPassword(@Body() dto: ResetPasswordDto) {
     return this.authService.resetPassword(dto);
+  }
+
+  @Post('admin-register')
+  @HttpCode(HttpStatus.OK)
+  async adminRegister(@Body() dto: AdminRegisterDto) {
+    return this.authService.adminRegister(dto);
   }
 
   @Get('me')

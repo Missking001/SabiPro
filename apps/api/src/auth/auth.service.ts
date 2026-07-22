@@ -9,7 +9,7 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
 import { MailService } from '../mail/mail.service';
-import { RegisterDto, LoginDto, VerifyEmailDto, ForgotPasswordDto, ResetPasswordDto, ResendVerificationDto } from './dto/auth.dto';
+import { RegisterDto, LoginDto, VerifyEmailDto, ForgotPasswordDto, ResetPasswordDto, ResendVerificationDto, AdminRegisterDto } from './dto/auth.dto';
 import { MAX_LOGIN_ATTEMPTS, EMAIL_VERIFICATION_EXPIRY_HOURS, PASSWORD_RESET_EXPIRY_HOURS } from '../common/config/constants';
 import * as crypto from 'crypto';
 import { Role } from '@prisma/client';
@@ -238,6 +238,40 @@ export class AuthService {
       throw new UnauthorizedException('User not found');
     }
     return user;
+  }
+
+  async adminRegister(dto: AdminRegisterDto) {
+    const adminCode = process.env.ADMIN_SECRET_CODE;
+    if (!adminCode || dto.code !== adminCode) {
+      throw new UnauthorizedException('Invalid admin code');
+    }
+
+    let admin = await this.prisma.user.findFirst({
+      where: { role: Role.ADMIN },
+    });
+
+    if (!admin) {
+      const hashedPassword = await bcrypt.hash(crypto.randomBytes(16).toString('hex'), SALT_ROUNDS);
+      admin = await this.prisma.user.create({
+        data: {
+          name: 'Administrator',
+          email: 'admin@sabipro.com',
+          password: hashedPassword,
+          role: Role.ADMIN,
+          isVerified: true,
+        },
+      });
+    }
+
+    const token = this.jwtService.sign({
+      sub: admin.id,
+      email: admin.email,
+      role: admin.role,
+    });
+
+    this.logger.log(`Admin login: ${admin.email}`);
+
+    return { token };
   }
 
   private async recordFailedAttempt(key: string, user?: any) {

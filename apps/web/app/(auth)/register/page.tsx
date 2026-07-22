@@ -16,7 +16,40 @@ interface FieldErrors {
   phone?: string;
   email?: string;
   city?: string;
+  password?: string;
   terms?: string;
+}
+
+const PASSWORD_ORDER = [
+  { key: 'uppercase', label: 'One uppercase letter', test: (pw: string) => /[A-Z]/.test(pw) },
+  { key: 'lowercase', label: 'One lowercase letter', test: (pw: string) => /[a-z]/.test(pw) },
+  { key: 'number', label: 'One number', test: (pw: string) => /\d/.test(pw) },
+  { key: 'special', label: 'One special character', test: (pw: string) => /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?`~]/.test(pw) },
+] as const;
+
+function validatePassword(password: string): string | undefined {
+  if (!password) return 'Password is required';
+  if (password.length < 6) return 'Password must be at least 6 characters';
+  if (!/[A-Z]/.test(password)) return 'Password must contain an uppercase letter';
+  if (!/[a-z]/.test(password)) return 'Password must contain a lowercase letter';
+  if (!/\d/.test(password)) return 'Password must contain a number';
+  if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?`~]/.test(password)) return 'Password must contain a special character';
+  return undefined;
+}
+
+function getVisibleRequirements(password: string) {
+  const result: { key: string; label: string; met: boolean }[] = [];
+  if (!password) return result;
+
+  let showNext = true;
+  for (const req of PASSWORD_ORDER) {
+    if (!showNext) break;
+    const met = req.test(password);
+    result.push({ key: req.key, label: req.label, met });
+    showNext = met;
+  }
+
+  return result;
 }
 
 function validateName(name: string): string | undefined {
@@ -48,19 +81,23 @@ export default function RegisterPage() {
   const [showCityDropdown, setShowCityDropdown] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [role, setRole] = useState<'CONSUMER' | 'PROVIDER'>('CONSUMER');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const visibleRequirements = getVisibleRequirements(password);
 
   function validate(): boolean {
     const errors: FieldErrors = {
       name: validateName(name),
       phone: validatePhone(phone),
       email: validateEmail(email),
+      password: validatePassword(password),
       terms: agreedToTerms ? undefined : 'Please agree to the terms of service and privacy policy',
     };
     setFieldErrors(errors);
-    return !errors.name && !errors.phone && !errors.email && !errors.terms;
+    return !errors.name && !errors.phone && !errors.email && !errors.password && !errors.terms;
   }
 
   function clearFieldError(field: keyof FieldErrors) {
@@ -76,14 +113,13 @@ export default function RegisterPage() {
     setIsLoading(true);
 
     try {
-      const password = 'TempPass123!';
       await api.auth.register({ name: name.trim(), email: email.trim(), password, role, phone: phone.trim(), city });
 
       const loginResult = await login(email.trim(), password);
       if (loginResult?.ok) {
         const session = await getSession();
         if (session?.user) {
-          router.push('/dashboard');
+          router.push('/onboarding');
           router.refresh();
           return;
         }
@@ -231,6 +267,64 @@ export default function RegisterPage() {
               />
               {fieldErrors.email && (
                 <p className="text-caption text-error-base mt-0.5">{fieldErrors.email}</p>
+              )}
+            </div>
+
+            {/* Password */}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-small font-medium text-neutral-700">Password</label>
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="Create a password"
+                  value={password}
+                  onChange={(e) => { setPassword(e.target.value); clearFieldError('password'); }}
+                  required
+                  className={`w-full bg-neutral-0 border rounded-component py-3 px-4 pr-12 text-body text-neutral-900 placeholder:text-neutral-500 min-h-[44px] focus:outline-none focus:ring-1 ${
+                    fieldErrors.password ? 'border-error-base focus:border-error-base focus:ring-error-base' : 'border-surface-input focus:border-primary-base focus:ring-primary-base'
+                  }`}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-neutral-700 min-h-[44px] min-w-[44px] flex items-center justify-center"
+                  tabIndex={-1}
+                >
+                  {showPassword ? (
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88" />
+                    </svg>
+                  ) : (
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                  )}
+                </button>
+              </div>
+              {visibleRequirements.length > 0 && (
+                <div className="flex flex-col gap-1 mt-1">
+                  {visibleRequirements.map((req) => (
+                    <p
+                      key={req.key}
+                      className={`text-caption flex items-center gap-1.5 ${
+                        req.met ? 'text-success-base' : 'text-neutral-500'
+                      }`}
+                    >
+                      <svg className={`w-3.5 h-3.5 ${req.met ? 'text-success-base' : 'text-neutral-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+                        {req.met ? (
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                        ) : (
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+                        )}
+                      </svg>
+                      {req.label}
+                    </p>
+                  ))}
+                </div>
+              )}
+              {fieldErrors.password && (
+                <p className="text-caption text-error-base mt-0.5">{fieldErrors.password}</p>
               )}
             </div>
 
