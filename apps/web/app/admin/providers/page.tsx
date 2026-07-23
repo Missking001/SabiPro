@@ -5,6 +5,7 @@ import { Skeleton, StatusBanner } from '@/components/ui';
 import { api, ApiClientError } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
 import { useSidebar } from '@/components/admin/SidebarContext';
+import { DocumentReviewModal } from '@/components/admin/DocumentReviewModal';
 import type { ProviderSummary } from '@/types';
 
 /* ── Mock data matching the reference screenshot ── */
@@ -98,6 +99,7 @@ export default function AdminProvidersPage() {
   const [error, setError] = useState('');
   const [feedback, setFeedback] = useState('');
   const [processingId, setProcessingId] = useState<string | null>(null);
+  const [reviewProvider, setReviewProvider] = useState<VettingProvider | null>(null);
 
   useEffect(() => {
     loadProviders();
@@ -118,33 +120,41 @@ export default function AdminProvidersPage() {
   }
 
   async function handleApprove(id: string, badgeType: string) {
-    if (id.startsWith('mock-')) return;
     setProcessingId(id);
     setFeedback('');
-    try {
-      await api.admin.approveVetting(id, badgeType);
-      setProviders((prev) => prev.filter((p) => p.id !== id));
-      setFeedback('Provider verified successfully');
-    } catch (err) {
-      setFeedback(err instanceof ApiClientError ? err.message : 'Failed to approve provider');
-    } finally {
-      setProcessingId(null);
+    await new Promise((r) => setTimeout(r, 600));
+    if (!id.startsWith('mock-')) {
+      try {
+        await api.admin.approveVetting(id, badgeType);
+      } catch (err) {
+        setFeedback(err instanceof ApiClientError ? err.message : 'Failed to approve provider');
+        setProcessingId(null);
+        return;
+      }
     }
+    setProviders((prev) => prev.filter((p) => p.id !== id));
+    setFeedback(`Provider approved (${badgeType.replace('_', ' ')})`);
+    setProcessingId(null);
+    setReviewProvider(null);
   }
 
   async function handleReject(id: string) {
-    if (id.startsWith('mock-')) return;
     setProcessingId(id);
     setFeedback('');
-    try {
-      await api.admin.revokeBadge(id);
-      setProviders((prev) => prev.filter((p) => p.id !== id));
-      setFeedback('Provider rejected');
-    } catch (err) {
-      setFeedback(err instanceof ApiClientError ? err.message : 'Failed to reject provider');
-    } finally {
-      setProcessingId(null);
+    await new Promise((r) => setTimeout(r, 600));
+    if (!id.startsWith('mock-')) {
+      try {
+        await api.admin.revokeBadge(id);
+      } catch (err) {
+        setFeedback(err instanceof ApiClientError ? err.message : 'Failed to reject provider');
+        setProcessingId(null);
+        return;
+      }
     }
+    setProviders((prev) => prev.filter((p) => p.id !== id));
+    setFeedback('Provider rejected');
+    setProcessingId(null);
+    setReviewProvider(null);
   }
 
   const count = providers.length;
@@ -326,6 +336,7 @@ export default function AdminProvidersPage() {
                   </button>
                   <button
                     type="button"
+                    onClick={() => setReviewProvider({ ...p, _docs: docs } as VettingProvider)}
                     className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-[#71717A] hover:text-[#18181B] transition-colors"
                   >
                     <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
@@ -344,11 +355,29 @@ export default function AdminProvidersPage() {
       {/* ── Help FAB ── */}
       <button
         type="button"
+        onClick={() => setFeedback('Contact support at support@sabipro.com')}
         className="fixed bottom-6 right-6 w-10 h-10 rounded-full bg-white border border-[#E5E7EB] shadow-md flex items-center justify-center text-[#71717A] hover:text-[#18181B] hover:shadow-lg transition-all z-50"
         aria-label="Help"
       >
         ?
       </button>
+
+      {/* ── Document Review Modal ── */}
+      {reviewProvider && (
+        <DocumentReviewModal
+          provider={{
+            id: reviewProvider.id,
+            name: reviewProvider.user?.name || 'Provider',
+            trade: reviewProvider.tradeCategory,
+            location: reviewProvider.location,
+            submittedAt: (reviewProvider as any)._submittedAt,
+            docs: (reviewProvider as any)._docs || [],
+          }}
+          onClose={() => setReviewProvider(null)}
+          onApprove={handleApprove}
+          onReject={handleReject}
+        />
+      )}
     </div>
   );
 }

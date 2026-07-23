@@ -103,26 +103,22 @@ export default function AdminUsersPage() {
   }
 
   async function handleSuspend(id: string) {
-    if (id.startsWith('mock-')) {
-      setUsers((prev) =>
-        prev.map((u) => (u.id === id ? { ...u, isActive: !u.isActive } : u)),
-      );
-      setFeedback('User status updated');
-      return;
-    }
     setProcessingId(id);
     setFeedback('');
-    try {
-      await api.admin.suspendUser(id);
-      setUsers((prev) =>
-        prev.map((u) => (u.id === id ? { ...u, isActive: !u.isActive } : u)),
-      );
-      setFeedback('User status updated');
-    } catch (err) {
-      setFeedback(err instanceof ApiClientError ? err.message : 'Failed to update user');
-    } finally {
-      setProcessingId(null);
+    await new Promise((r) => setTimeout(r, 500));
+    if (!id.startsWith('mock-')) {
+      try {
+        await api.admin.suspendUser(id);
+      } catch (err) {
+        setFeedback(err instanceof ApiClientError ? err.message : 'Failed to update user');
+        setProcessingId(null);
+        return;
+      }
     }
+    setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, isActive: !u.isActive } : u)));
+    const user = users.find((u) => u.id === id);
+    setFeedback(user?.isActive ? 'User suspended' : 'User reinstated');
+    setProcessingId(null);
   }
 
   const filtered = users.filter((u) =>
@@ -289,6 +285,7 @@ export default function AdminUsersPage() {
                         <div className="flex items-center gap-3">
                           <button
                             type="button"
+                            onClick={() => setFeedback(`Viewing ${u.name} — email: ${u.email}`)}
                             className="text-sm text-[#71717A] hover:text-[#18181B] font-medium transition-colors"
                           >
                             View

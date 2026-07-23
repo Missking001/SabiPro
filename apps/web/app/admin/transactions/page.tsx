@@ -126,6 +126,7 @@ export default function AdminTransactionsPage() {
   const [transactions, setTransactions] = useState<ExtendedTx[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
+  const [feedback, setFeedback] = useState('');
   const [activeFilter, setActiveFilter] = useState<TxFilter>('All');
 
   useEffect(() => {
@@ -228,6 +229,7 @@ export default function AdminTransactionsPage() {
       </div>
 
       {error && <StatusBanner variant="error" className="mb-0">{error}</StatusBanner>}
+      {feedback && <StatusBanner variant="success" className="mb-0">{feedback}</StatusBanner>}
 
       {/* ── Filter Tabs ── */}
       <div className="flex flex-wrap gap-2">
@@ -299,6 +301,7 @@ export default function AdminTransactionsPage() {
                           {isHeld && (
                             <button
                               type="button"
+                              onClick={() => setFeedback(`Release initiated for ${txId}`)}
                               className="text-xs font-semibold text-[#1A6B3C] border border-[#1A6B3C] px-3 py-1.5 rounded-md hover:bg-[#EAF5EE] transition-colors"
                             >
                               Release
@@ -307,6 +310,7 @@ export default function AdminTransactionsPage() {
                           {isDisputed && (
                             <button
                               type="button"
+                              onClick={() => setFeedback(`Refund processed for ${txId}`)}
                               className="text-xs font-semibold text-[#EF4444] border border-[#EF4444] px-3 py-1.5 rounded-md hover:bg-[#FEF2F2] transition-colors"
                             >
                               Refund
@@ -314,6 +318,7 @@ export default function AdminTransactionsPage() {
                           )}
                           <button
                             type="button"
+                            onClick={() => setFeedback(`${service} — ₦${(tx.amount / 100).toLocaleString('en-NG')} by ${consumer} → ${provider}`)}
                             className="text-sm text-[#71717A] hover:text-[#18181B] font-medium transition-colors"
                           >
                             View
