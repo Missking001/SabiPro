@@ -74,21 +74,21 @@ export function AdminSidebar() {
         <Link href="/admin/dashboard" className="flex items-center gap-2 overflow-hidden">
           {collapsed ? (
             <Image
-              src="/sabipro_logo_v4.png"
+              src="/sabipro_logo_v5.png"
               alt="SabiPro"
               width={32}
               height={32}
-              className="h-8 w-auto object-contain flex-shrink-0 brightness-0 invert"
+              className="h-8 w-auto object-contain flex-shrink-0"
               priority
             />
           ) : (
             <div className="flex items-center gap-2">
               <Image
-                src="/sabipro_logo_v4.png"
+                src="/sabipro_logo_v5.png"
                 alt="SabiPro"
                 width={130}
                 height={36}
-                className="h-9 w-auto object-contain flex-shrink-0 brightness-0 invert"
+                className="h-9 w-auto object-contain flex-shrink-0 brightness-110"
                 priority
               />
               <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-[#1A6B3C] text-white uppercase tracking-wider">
