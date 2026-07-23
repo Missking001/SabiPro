@@ -235,7 +235,7 @@ export default function ProviderDashboardPage() {
             </div>
             <div>
               <p className="text-2xl md:text-3xl font-bold text-neutral-900 tracking-tight flex items-baseline gap-1">
-                {provider.averageRating > 0 ? provider.averageRating.toFixed(1) : '5.0'}
+                {provider.averageRating > 0 ? provider.averageRating.toFixed(1) : '0'}
                 <span className="text-base text-neutral-400 font-normal">★</span>
               </p>
               <p className="text-caption text-neutral-500 font-medium mt-0.5">Rating</p>
