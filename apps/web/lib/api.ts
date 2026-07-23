@@ -210,6 +210,10 @@ export const api = {
     revokeBadge: (id: string) =>
       request<{ message: string }>(`/api/admin/vetting/${id}/revoke`, { method: 'POST' }),
     transactions: () => request<Transaction[]>('/api/admin/transactions'),
+    releasePayout: (id: string) =>
+      request<{ message: string }>(`/api/payments/${id}/release`, { method: 'POST' }),
+    refundTransaction: (id: string) =>
+      request<{ message: string }>(`/api/payments/${id}/refund`, { method: 'POST' }),
   },
 
   payments: {
