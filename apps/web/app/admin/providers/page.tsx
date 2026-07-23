@@ -8,98 +8,15 @@ import { useSidebar } from '@/components/admin/SidebarContext';
 import { DocumentReviewModal } from '@/components/admin/DocumentReviewModal';
 import type { ProviderSummary } from '@/types';
 
-/* ── Mock data matching the reference screenshot ── */
-const mockProviders = [
-  {
-    id: 'mock-1',
-    slug: 'yusuf-ibrahim',
-    tradeCategory: 'Electrician',
-    location: 'Maitama, Abuja',
-    bio: null,
-    priceRange: null,
-    averageRating: 0,
-    totalReviews: 0,
-    isVerified: false,
-    isAvailable: true,
-    onboardingState: 'ACTIVE' as const,
-    user: { name: 'Yusuf Ibrahim', avatarUrl: null },
-    vettingBadge: null,
-    _submittedAt: '2025-07-02',
-    _docs: ['NIN', 'COREN Certificate'],
-  },
-  {
-    id: 'mock-2',
-    slug: 'chinelo-obi',
-    tradeCategory: 'Tailor',
-    location: 'Apapa, Lagos',
-    bio: null,
-    priceRange: null,
-    averageRating: 0,
-    totalReviews: 0,
-    isVerified: false,
-    isAvailable: true,
-    onboardingState: 'ACTIVE' as const,
-    user: { name: 'Chinelo Obi', avatarUrl: null },
-    vettingBadge: null,
-    _submittedAt: '2025-07-01',
-    _docs: ['NIN'],
-  },
-  {
-    id: 'mock-3',
-    slug: 'suleiman-musa',
-    tradeCategory: 'Plumber',
-    location: 'Karu, Abuja',
-    bio: null,
-    priceRange: null,
-    averageRating: 0,
-    totalReviews: 0,
-    isVerified: false,
-    isAvailable: true,
-    onboardingState: 'ACTIVE' as const,
-    user: { name: 'Suleiman Musa', avatarUrl: null },
-    vettingBadge: null,
-    _submittedAt: '2025-06-30',
-    _docs: ['NIN', 'WAN License'],
-  },
-  {
-    id: 'mock-4',
-    slug: 'amaka-eze',
-    tradeCategory: 'Carpenter',
-    location: 'Kubwa, Abuja',
-    bio: null,
-    priceRange: null,
-    averageRating: 0,
-    totalReviews: 0,
-    isVerified: false,
-    isAvailable: true,
-    onboardingState: 'ACTIVE' as const,
-    user: { name: 'Amaka Eze', avatarUrl: null },
-    vettingBadge: null,
-    _submittedAt: '2025-06-29',
-    _docs: ['NIN', 'Craftsman Cert'],
-  },
-];
-
-type VettingProvider = ProviderSummary & {
-  _submittedAt?: string;
-  _docs?: string[];
-};
-
-function formatSubmittedDate(iso?: string): string {
-  if (!iso) return '';
-  const d = new Date(iso);
-  return `Submitted ${d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`;
-}
-
 export default function AdminProvidersPage() {
   const { user } = useAuth();
   const { toggle: toggleSidebar } = useSidebar();
-  const [providers, setProviders] = useState<VettingProvider[]>([]);
+  const [providers, setProviders] = useState<ProviderSummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [feedback, setFeedback] = useState('');
   const [processingId, setProcessingId] = useState<string | null>(null);
-  const [reviewProvider, setReviewProvider] = useState<VettingProvider | null>(null);
+  const [reviewProvider, setReviewProvider] = useState<ProviderSummary | null>(null);
 
   useEffect(() => {
     loadProviders();
@@ -108,12 +25,12 @@ export default function AdminProvidersPage() {
   async function loadProviders() {
     try {
       const res = await api.admin.providers();
-      const live = (res.data || []).filter(
+      const unverified = (res.data || []).filter(
         (p) => !p.isVerified && (p.onboardingState === 'ACTIVE' || p.onboardingState === 'PROFILE_COMPLETE'),
       );
-      setProviders(live.length > 0 ? live : mockProviders);
-    } catch {
-      setProviders(mockProviders);
+      setProviders(unverified);
+    } catch (err: any) {
+      setError(err.message || 'Failed to load providers');
     } finally {
       setIsLoading(false);
     }
@@ -122,44 +39,35 @@ export default function AdminProvidersPage() {
   async function handleApprove(id: string, badgeType: string) {
     setProcessingId(id);
     setFeedback('');
-    await new Promise((r) => setTimeout(r, 600));
-    if (!id.startsWith('mock-')) {
-      try {
-        await api.admin.approveVetting(id, badgeType);
-      } catch (err) {
-        setFeedback(err instanceof ApiClientError ? err.message : 'Failed to approve provider');
-        setProcessingId(null);
-        return;
-      }
+    try {
+      await api.admin.approveVetting(id, badgeType);
+      setProviders((prev) => prev.filter((p) => p.id !== id));
+      setFeedback(`Provider approved (${badgeType.replace('_', ' ')})`);
+      setReviewProvider(null);
+    } catch (err) {
+      setFeedback(err instanceof ApiClientError ? err.message : 'Failed to approve provider');
+    } finally {
+      setProcessingId(null);
     }
-    setProviders((prev) => prev.filter((p) => p.id !== id));
-    setFeedback(`Provider approved (${badgeType.replace('_', ' ')})`);
-    setProcessingId(null);
-    setReviewProvider(null);
   }
 
   async function handleReject(id: string) {
     setProcessingId(id);
     setFeedback('');
-    await new Promise((r) => setTimeout(r, 600));
-    if (!id.startsWith('mock-')) {
-      try {
-        await api.admin.revokeBadge(id);
-      } catch (err) {
-        setFeedback(err instanceof ApiClientError ? err.message : 'Failed to reject provider');
-        setProcessingId(null);
-        return;
-      }
+    try {
+      await api.admin.revokeBadge(id);
+      setProviders((prev) => prev.filter((p) => p.id !== id));
+      setFeedback('Provider rejected');
+      setReviewProvider(null);
+    } catch (err) {
+      setFeedback(err instanceof ApiClientError ? err.message : 'Failed to reject provider');
+    } finally {
+      setProcessingId(null);
     }
-    setProviders((prev) => prev.filter((p) => p.id !== id));
-    setFeedback('Provider rejected');
-    setProcessingId(null);
-    setReviewProvider(null);
   }
 
   const count = providers.length;
 
-  /* ── Loading skeleton ── */
   if (isLoading) {
     return (
       <div className="w-full space-y-6">
@@ -194,7 +102,7 @@ export default function AdminProvidersPage() {
 
   return (
     <div className="w-full space-y-6 relative pb-12">
-      {/* ── Top Header Bar ── */}
+      {/* Header bar */}
       <div className="flex items-center justify-between bg-transparent py-1 w-full">
         <button
           type="button"
@@ -206,44 +114,27 @@ export default function AdminProvidersPage() {
             <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
           </svg>
         </button>
-
         <div className="flex items-center gap-4">
-          <button
-            type="button"
-            className="w-9 h-9 rounded-full bg-white border border-[#E5E7EB] flex items-center justify-center text-[#52525B] hover:text-[#18181B] transition-colors relative shadow-xs"
-            aria-label="Notifications"
-          >
-            <svg className="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.75}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
-            </svg>
-            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-[#EF4444] rounded-full" />
-          </button>
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-full bg-[#1A6B3C] text-white flex items-center justify-center font-bold text-sm shadow-xs">
-              A
-            </div>
+            <div className="w-9 h-9 rounded-full bg-[#1A6B3C] text-white flex items-center justify-center font-bold text-sm shadow-xs">A</div>
             <div className="hidden sm:block">
-              <p className="text-sm font-semibold text-[#18181B] leading-tight">
-                {user?.name || 'Admin User'}
-              </p>
+              <p className="text-sm font-semibold text-[#18181B] leading-tight">{user?.name || 'Admin User'}</p>
               <p className="text-xs text-[#71717A] leading-tight">Platform ops</p>
             </div>
           </div>
         </div>
       </div>
 
-      {/* ── Page Title ── */}
       <div>
         <h1 className="text-[26px] font-bold text-[#18181B] leading-tight">Vetting Queue</h1>
         <p className="text-sm text-[#71717A] mt-1">
-          {count} provider{count !== 1 ? 's' : ''} awaiting manual document review
+          {count} provider{count !== 1 ? 's' : ''} awaiting review
         </p>
       </div>
 
       {feedback && <StatusBanner variant="success" className="mb-0">{feedback}</StatusBanner>}
       {error && <StatusBanner variant="error" className="mb-0">{error}</StatusBanner>}
 
-      {/* ── Provider Cards ── */}
       {count === 0 ? (
         <div className="bg-white rounded-xl border border-[#E5E7EB] text-center py-16">
           <p className="text-4xl mb-3">✅</p>
@@ -252,43 +143,16 @@ export default function AdminProvidersPage() {
       ) : (
         <div className="space-y-4">
           {providers.map((p) => {
-            const docs = (p as VettingProvider)._docs || [];
-            const submittedAt = (p as VettingProvider)._submittedAt;
             const isProcessing = processingId === p.id;
-
             return (
-              <div
-                key={p.id}
-                className="bg-white rounded-xl border border-[#E5E7EB] p-6 transition-shadow hover:shadow-sm"
-              >
-                {/* Top row — name + doc badges */}
+              <div key={p.id} className="bg-white rounded-xl border border-[#E5E7EB] p-6 transition-shadow hover:shadow-sm">
                 <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-1">
                   <h2 className="text-base font-bold text-[#18181B]">{p.user?.name || 'Provider'}</h2>
-                  {docs.length > 0 && (
-                    <div className="flex flex-wrap gap-2">
-                      {docs.map((doc) => (
-                        <span
-                          key={doc}
-                          className="text-xs font-medium text-[#1A6B3C] bg-[#EAF5EE] border border-[#9FE1CB] px-2.5 py-0.5 rounded-full"
-                        >
-                          {doc}
-                        </span>
-                      ))}
-                    </div>
-                  )}
                 </div>
-
-                {/* Trade + Location */}
-                <p className="text-sm text-[#71717A] italic">
-                  {p.tradeCategory} · {p.location}
+                <p className="text-sm text-[#71717A] italic">{p.tradeCategory} · {p.location}</p>
+                <p className="text-xs text-[#A1A1AA] mt-0.5">
+                  {p.onboardingState === 'PROFILE_COMPLETE' ? 'Profile complete' : 'Active'} · Not yet verified
                 </p>
-
-                {/* Submitted date */}
-                {submittedAt && (
-                  <p className="text-xs text-[#A1A1AA] mt-0.5">{formatSubmittedDate(submittedAt)}</p>
-                )}
-
-                {/* Action buttons */}
                 <div className="flex flex-wrap items-center gap-2 mt-4">
                   <button
                     type="button"
@@ -336,7 +200,7 @@ export default function AdminProvidersPage() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setReviewProvider({ ...p, _docs: docs } as VettingProvider)}
+                    onClick={() => setReviewProvider(p)}
                     className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-[#71717A] hover:text-[#18181B] transition-colors"
                   >
                     <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
@@ -352,7 +216,7 @@ export default function AdminProvidersPage() {
         </div>
       )}
 
-      {/* ── Help FAB ── */}
+      {/* Help FAB */}
       <button
         type="button"
         onClick={() => setFeedback('Contact support at support@sabipro.com')}
@@ -362,7 +226,7 @@ export default function AdminProvidersPage() {
         ?
       </button>
 
-      {/* ── Document Review Modal ── */}
+      {/* Document Review Modal */}
       {reviewProvider && (
         <DocumentReviewModal
           provider={{
@@ -370,8 +234,9 @@ export default function AdminProvidersPage() {
             name: reviewProvider.user?.name || 'Provider',
             trade: reviewProvider.tradeCategory,
             location: reviewProvider.location,
-            submittedAt: (reviewProvider as any)._submittedAt,
-            docs: (reviewProvider as any)._docs || [],
+            submittedAt: undefined,
+            docs: [],
+            docUrls: [],
           }}
           onClose={() => setReviewProvider(null)}
           onApprove={handleApprove}
