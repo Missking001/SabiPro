@@ -5,6 +5,7 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 export class SupabaseService {
   private readonly logger = new Logger(SupabaseService.name);
   private client: SupabaseClient | null = null;
+  private ensuredBuckets = new Set<string>();
 
   private getClient(): SupabaseClient {
     if (!this.client) {
@@ -20,12 +21,37 @@ export class SupabaseService {
     return this.client;
   }
 
+  private async ensureBucket(bucket: string): Promise<void> {
+    if (this.ensuredBuckets.has(bucket)) return;
+
+    const client = this.getClient();
+
+    const { data: buckets } = await client.storage.listBuckets();
+    const exists = buckets?.some((b) => b.id === bucket);
+
+    if (!exists) {
+      this.logger.log(`Bucket "${bucket}" not found, creating...`);
+      const { error } = await client.storage.createBucket(bucket, {
+        public: true,
+      });
+      if (error) {
+        this.logger.error(`Failed to create bucket "${bucket}": ${error.message}`);
+        throw new Error(`Storage bucket "${bucket}" could not be created. Please create it in the Supabase dashboard.`);
+      }
+      this.logger.log(`Bucket "${bucket}" created successfully`);
+    }
+
+    this.ensuredBuckets.add(bucket);
+  }
+
   async upload(
     bucket: string,
     path: string,
     buffer: Buffer,
     contentType: string,
   ): Promise<string> {
+    await this.ensureBucket(bucket);
+
     const client = this.getClient();
 
     const { error } = await client.storage.from(bucket).upload(path, buffer, {

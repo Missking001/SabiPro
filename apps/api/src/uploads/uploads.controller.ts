@@ -6,6 +6,7 @@ import {
   UploadedFile,
   UploadedFiles,
   BadRequestException,
+  InternalServerErrorException,
   Logger,
 } from '@nestjs/common';
 import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
@@ -37,7 +38,7 @@ export class UploadsController {
     private readonly prisma: PrismaService,
   ) {}
 
-  private validateFile(file: UploadFile, maxSize: number, label: string) {
+  private validateFile(file: UploadFile | undefined, maxSize: number, label: string) {
     if (!file) {
       throw new BadRequestException('No file provided');
     }
@@ -74,19 +75,25 @@ export class UploadsController {
   ) {
     this.validateFile(file, MAX_AVATAR_SIZE, 'Avatar');
 
-    const ext = this.getExtension(file.mimetype);
-    const path = this.generateFilePath(user.userId, 'avatars', ext);
+    try {
+      const ext = this.getExtension(file.mimetype);
+      const path = this.generateFilePath(user.userId, 'avatars', ext);
 
-    const url = await this.supabase.upload('sabipro', path, file.buffer, file.mimetype);
+      const url = await this.supabase.upload('sabipro', path, file.buffer, file.mimetype);
 
-    await this.prisma.user.update({
-      where: { id: user.userId },
-      data: { avatarUrl: url },
-    });
+      await this.prisma.user.update({
+        where: { id: user.userId },
+        data: { avatarUrl: url },
+      });
 
-    this.logger.log(`Avatar uploaded for user ${user.userId}`);
-
-    return { url };
+      this.logger.log(`Avatar uploaded for user ${user.userId}`);
+      return { url };
+    } catch (err: any) {
+      this.logger.error(`Avatar upload failed: ${err.message}`);
+      throw new InternalServerErrorException(
+        err.message || 'Failed to upload avatar. Please try again.',
+      );
+    }
   }
 
   @Post('portfolio')
@@ -99,25 +106,17 @@ export class UploadsController {
       throw new BadRequestException('No files provided');
     }
 
-    const provider = await this.prisma.provider.findUnique({ where: { userId: user.userId } });
-    if (!provider) {
-      throw new BadRequestException('You must have a provider profile first');
-    }
-
-    const existingCount = provider.portfolioUrls.length;
-    if (existingCount + files.length > MAX_PORTFOLIO_COUNT) {
-      throw new BadRequestException(
-        `You can have at most ${MAX_PORTFOLIO_COUNT} portfolio photos. You already have ${existingCount}.`,
-      );
-    }
-
     for (const file of files) {
       this.validateFile(file, MAX_PORTFOLIO_SIZE, 'Portfolio photo');
     }
 
-    const urls: string[] = [];
+    if (files.length > MAX_PORTFOLIO_COUNT) {
+      throw new BadRequestException(`Maximum ${MAX_PORTFOLIO_COUNT} photos allowed at once`);
+    }
 
     try {
+      const urls: string[] = [];
+
       for (const file of files) {
         const ext = this.getExtension(file.mimetype);
         const path = this.generateFilePath(user.userId, 'portfolio', ext);
@@ -125,25 +124,42 @@ export class UploadsController {
         urls.push(url);
       }
 
-      await this.prisma.provider.update({
+      // Append to provider portfolio if profile exists, otherwise just return URLs
+      const provider = await this.prisma.provider.findUnique({
         where: { userId: user.userId },
-        data: {
-          portfolioUrls: [...provider.portfolioUrls, ...urls],
-        },
+        select: { id: true, portfolioUrls: true },
       });
 
-      this.logger.log(`${urls.length} portfolio photos uploaded for user ${user.userId}`);
+      if (provider) {
+        const combined = [...provider.portfolioUrls, ...urls];
+        if (combined.length > MAX_PORTFOLIO_COUNT) {
+          // Cleanup excess uploaded files
+          for (const url of urls) {
+            try {
+              const parts = new URL(url).pathname.split('/');
+              const filePath = parts.slice(4).join('/');
+              await this.supabase.delete('sabipro', `${filePath}`);
+            } catch { /* ignore */ }
+          }
+          throw new BadRequestException(
+            `You can have at most ${MAX_PORTFOLIO_COUNT} portfolio photos. You currently have ${provider.portfolioUrls.length}.`,
+          );
+        }
 
-      return { urls };
-    } catch (err) {
-      // Cleanup on failure — remove any files already uploaded
-      for (const url of urls) {
-        try {
-          const path = url.split('/').slice(-3).join('/');
-          await this.supabase.delete('sabipro', path);
-        } catch { /* ignore cleanup errors */ }
+        await this.prisma.provider.update({
+          where: { id: provider.id },
+          data: { portfolioUrls: combined },
+        });
       }
-      throw err;
+
+      this.logger.log(`${urls.length} portfolio photos uploaded for user ${user.userId}`);
+      return { urls };
+    } catch (err: any) {
+      if (err instanceof BadRequestException) throw err;
+      this.logger.error(`Portfolio upload failed: ${err.message}`);
+      throw new InternalServerErrorException(
+        err.message || 'Failed to upload portfolio photos. Please try again.',
+      );
     }
   }
 }
