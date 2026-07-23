@@ -12,6 +12,8 @@ import { ReviewsModule } from './reviews/reviews.module';
 import { InquiriesModule } from './inquiries/inquiries.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { PaymentsModule } from './payments/payments.module';
+import { SupabaseModule } from './common/supabase/supabase.module';
+import { UploadsModule } from './uploads/uploads.module';
 import { AdminModule } from './admin/admin.module';
 import { MailModule } from './mail/mail.module';
 
@@ -32,6 +34,8 @@ import { MailModule } from './mail/mail.module';
     InquiriesModule,
     NotificationsModule,
     PaymentsModule,
+    SupabaseModule,
+    UploadsModule,
     AdminModule,
     MailModule,
   ],

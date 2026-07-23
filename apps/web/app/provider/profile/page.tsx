@@ -1,12 +1,17 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Button, Input, StatusBanner, Skeleton } from '@/components/ui';
 import { api, ApiClientError } from '@/lib/api';
 import { getInitials } from '@/lib/utils';
 import type { MyProviderProfile } from '@/types';
+
+const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+const MAX_AVATAR_SIZE = 1 * 1024 * 1024;
+const MAX_PORTFOLIO_SIZE = 2 * 1024 * 1024;
+const MAX_PORTFOLIO_COUNT = 6;
 
 export default function ProviderProfilePage() {
   const [provider, setProvider] = useState<MyProviderProfile | null>(null);
@@ -17,14 +22,18 @@ export default function ProviderProfilePage() {
   const [priceRangeMax, setPriceRangeMax] = useState('');
   const [isAvailable, setIsAvailable] = useState(true);
   const [portfolioUrls, setPortfolioUrls] = useState<string[]>([]);
-  
+
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isFetching, setIsFetching] = useState(true);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [uploadingPortfolio, setUploadingPortfolio] = useState(false);
   const [providerId, setProviderId] = useState('');
 
-  // Pre-populate form with existing profile data
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+  const portfolioInputRef = useRef<HTMLInputElement>(null);
+
   useEffect(() => {
     async function loadProfile() {
       try {
@@ -42,7 +51,6 @@ export default function ProviderProfilePage() {
           if (profile.priceRangeMax != null) setPriceRangeMax(String(profile.priceRangeMax / 100));
         }
       } catch {
-        // No existing profile — form starts empty
       } finally {
         setIsFetching(false);
       }
@@ -69,9 +77,7 @@ export default function ProviderProfilePage() {
           priceRangeMax: maxKobo,
           isAvailable,
         });
-        if (updatedRes.data) {
-          setProvider(updatedRes.data);
-        }
+        if (updatedRes.data) setProvider(updatedRes.data);
         setSuccess('Profile updated successfully');
       } else {
         const res = await api.providers.create({
@@ -95,12 +101,92 @@ export default function ProviderProfilePage() {
     }
   }
 
-  // Sample placeholder portfolio photos for display if empty
-  const displayPhotos = portfolioUrls.length > 0 ? portfolioUrls : [
-    'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=500&auto=format&fit=crop&q=60',
-    'https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=500&auto=format&fit=crop&q=60',
-    'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=500&auto=format&fit=crop&q=60',
-  ];
+  function validateFile(file: File, maxSize: number, label: string): string | null {
+    if (!ALLOWED_TYPES.includes(file.type)) {
+      return `${label} must be JPG, PNG, or WebP`;
+    }
+    if (file.size > maxSize) {
+      const mb = maxSize / (1024 * 1024);
+      return `${label} must be under ${mb}MB`;
+    }
+    return null;
+  }
+
+  async function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const validationError = validateFile(file, MAX_AVATAR_SIZE, 'Avatar');
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+
+    setUploadingAvatar(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      const res = await api.uploads.avatar(file);
+      const avatarUrl = res.data?.url;
+      if (avatarUrl && provider) {
+        setProvider({ ...provider, user: { ...provider.user, avatarUrl } });
+      }
+      setSuccess('Profile photo updated');
+    } catch (err) {
+      if (err instanceof ApiClientError) {
+        setError(err.message);
+      } else {
+        setError('Failed to upload photo');
+      }
+    } finally {
+      setUploadingAvatar(false);
+      if (avatarInputRef.current) avatarInputRef.current.value = '';
+    }
+  }
+
+  async function handlePortfolioChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    const remaining = MAX_PORTFOLIO_COUNT - portfolioUrls.length;
+    if (files.length > remaining) {
+      setError(`You can add at most ${remaining} more photo${remaining === 1 ? '' : 's'}`);
+      return;
+    }
+
+    for (const file of Array.from(files)) {
+      const validationError = validateFile(file, MAX_PORTFOLIO_SIZE, 'Portfolio photo');
+      if (validationError) {
+        setError(validationError);
+        return;
+      }
+    }
+
+    setUploadingPortfolio(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      const res = await api.uploads.portfolio(Array.from(files));
+      const newUrls = res.data?.urls || [];
+      setPortfolioUrls((prev) => [...prev, ...newUrls]);
+      setSuccess(`${newUrls.length} photo${newUrls.length === 1 ? '' : 's'} added`);
+    } catch (err) {
+      if (err instanceof ApiClientError) {
+        setError(err.message);
+      } else {
+        setError('Failed to upload photos');
+      }
+    } finally {
+      setUploadingPortfolio(false);
+      if (portfolioInputRef.current) portfolioInputRef.current.value = '';
+    }
+  }
+
+  function removePortfolio(index: number) {
+    setPortfolioUrls((prev) => prev.filter((_, i) => i !== index));
+  }
 
   if (isFetching) {
     return (
@@ -118,7 +204,6 @@ export default function ProviderProfilePage() {
   return (
     <div className="min-h-screen bg-[#FAF9F5] py-6 px-4 md:px-6 pb-24">
       <div className="max-w-xl mx-auto space-y-4">
-        {/* Header matching mockup */}
         <div className="flex items-center justify-between mb-2">
           <Link
             href="/provider/dashboard"
@@ -139,7 +224,7 @@ export default function ProviderProfilePage() {
           <div className="bg-white rounded-card border border-surface-border p-4 shadow-xs">
             <h2 className="text-small font-semibold text-neutral-900 mb-3">Profile photo</h2>
             <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-xl bg-neutral-800 text-white flex items-center justify-center font-bold text-lg overflow-hidden relative border border-surface-border">
+              <div className="w-14 h-14 rounded-xl bg-neutral-800 text-white flex items-center justify-center font-bold text-lg overflow-hidden relative border border-surface-border flex-shrink-0">
                 {provider?.user?.avatarUrl ? (
                   <Image
                     src={provider.user.avatarUrl}
@@ -151,14 +236,27 @@ export default function ProviderProfilePage() {
                   getInitials(provider?.user?.name || 'Provider')
                 )}
               </div>
+              <input
+                ref={avatarInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                className="hidden"
+                onChange={handleAvatarChange}
+              />
               <button
                 type="button"
-                className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-surface-border text-neutral-700 text-small font-medium rounded-component hover:bg-neutral-50 transition-colors shadow-2xs"
+                disabled={uploadingAvatar}
+                onClick={() => avatarInputRef.current?.click()}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-surface-border text-neutral-700 text-small font-medium rounded-component hover:bg-neutral-50 transition-colors shadow-2xs disabled:opacity-50"
               >
-                <svg className="w-4 h-4 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
-                </svg>
-                Change photo
+                {uploadingAvatar ? (
+                  <span className="w-4 h-4 border-2 border-neutral-400 border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <svg className="w-4 h-4 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+                  </svg>
+                )}
+                {uploadingAvatar ? 'Uploading...' : 'Change photo'}
               </button>
             </div>
           </div>
@@ -181,7 +279,7 @@ export default function ProviderProfilePage() {
             />
           </div>
 
-          {/* Bio Card matching mockup */}
+          {/* Bio Card */}
           <div className="bg-white rounded-card border border-surface-border p-4 shadow-xs">
             <label htmlFor="bio-input" className="block text-small font-semibold text-neutral-900 mb-2">
               Bio
@@ -200,7 +298,7 @@ export default function ProviderProfilePage() {
             </div>
           </div>
 
-          {/* Price Range Card matching mockup */}
+          {/* Price Range Card */}
           <div className="bg-white rounded-card border border-surface-border p-4 shadow-xs">
             <h2 className="text-small font-semibold text-neutral-900 mb-2">Price range</h2>
             <div className="grid grid-cols-2 gap-3">
@@ -221,7 +319,7 @@ export default function ProviderProfilePage() {
             </div>
           </div>
 
-          {/* Available for work Toggle Card matching mockup */}
+          {/* Available for work Toggle Card */}
           <div className="bg-white rounded-card border border-surface-border p-4 shadow-xs flex items-center justify-between">
             <div>
               <h2 className="text-small font-semibold text-neutral-900">Available for work</h2>
@@ -244,17 +342,26 @@ export default function ProviderProfilePage() {
             </button>
           </div>
 
-          {/* Portfolio Photos Card matching mockup */}
+          {/* Portfolio Photos Card */}
           <div className="bg-white rounded-card border border-surface-border p-4 shadow-xs">
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-small font-semibold text-neutral-900">Portfolio photos</h2>
               <span className="text-caption text-neutral-400 font-medium">
-                {displayPhotos.length}/6 photos
+                {portfolioUrls.length}/{MAX_PORTFOLIO_COUNT} photos
               </span>
             </div>
 
+            <input
+              ref={portfolioInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              multiple
+              className="hidden"
+              onChange={handlePortfolioChange}
+            />
+
             <div className="grid grid-cols-3 gap-3">
-              {displayPhotos.map((url, idx) => (
+              {portfolioUrls.map((url, idx) => (
                 <div key={idx} className="relative aspect-square rounded-component overflow-hidden group border border-surface-border">
                   <Image
                     src={url}
@@ -262,25 +369,37 @@ export default function ProviderProfilePage() {
                     fill
                     className="object-cover"
                   />
-                  <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                    <span className="text-white text-xs bg-black/60 px-1.5 py-0.5 rounded">✕</span>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => removePortfolio(idx)}
+                    className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+                  >
+                    <span className="text-white text-xs bg-black/60 px-2 py-1 rounded font-semibold">Remove</span>
+                  </button>
                 </div>
               ))}
 
-              {displayPhotos.length < 6 && (
+              {portfolioUrls.length < MAX_PORTFOLIO_COUNT && (
                 <button
                   type="button"
-                  className="aspect-square rounded-component border-2 border-dashed border-neutral-300 flex flex-col items-center justify-center text-neutral-400 hover:border-primary-base hover:text-primary-base transition-colors bg-neutral-50/50"
+                  disabled={uploadingPortfolio}
+                  onClick={() => portfolioInputRef.current?.click()}
+                  className="aspect-square rounded-component border-2 border-dashed border-neutral-300 flex flex-col items-center justify-center text-neutral-400 hover:border-primary-base hover:text-primary-base transition-colors bg-neutral-50/50 disabled:opacity-50"
                 >
-                  <span className="text-xl font-light">+</span>
-                  <span className="text-caption font-medium mt-0.5">Add photo</span>
+                  {uploadingPortfolio ? (
+                    <span className="w-5 h-5 border-2 border-neutral-400 border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <>
+                      <span className="text-xl font-light">+</span>
+                      <span className="text-caption font-medium mt-0.5">Add photo</span>
+                    </>
+                  )}
                 </button>
               )}
             </div>
           </div>
 
-          {/* Vetting Status Card matching mockup */}
+          {/* Vetting Status Card */}
           <div className="bg-[#FFFDF7] border border-amber-200 rounded-card p-4 shadow-xs space-y-2">
             <div className="flex items-center gap-2 text-amber-800">
               <svg className="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
@@ -301,7 +420,7 @@ export default function ProviderProfilePage() {
             </div>
           </div>
 
-          {/* Save Changes Button matching mockup */}
+          {/* Save Changes Button */}
           <Button
             type="submit"
             isLoading={isLoading}

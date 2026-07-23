@@ -27,8 +27,10 @@ async function request<T>(
 ): Promise<ApiResponse<T>> {
   const token = getToken();
 
+  const isFormData = options.body instanceof FormData;
+
   const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
+    ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
     ...(options.headers as Record<string, string>),
   };
 
@@ -236,5 +238,26 @@ export const api = {
         method: 'POST',
         body: JSON.stringify(data),
       }),
+  },
+
+  uploads: {
+    avatar: (file: File) => {
+      const formData = new FormData();
+      formData.append('file', file);
+      return request<{ url: string }>('/api/uploads/avatar', {
+        method: 'POST',
+        body: formData,
+        headers: {},
+      });
+    },
+    portfolio: (files: File[]) => {
+      const formData = new FormData();
+      files.forEach((f) => formData.append('files', f));
+      return request<{ urls: string[] }>('/api/uploads/portfolio', {
+        method: 'POST',
+        body: formData,
+        headers: {},
+      });
+    },
   },
 };
