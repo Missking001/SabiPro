@@ -47,7 +47,7 @@ export default function AdminDashboardPage() {
 
   if (isLoading) {
     return (
-      <div className="w-full space-y-6">
+      <div className="max-w-[1240px] mx-auto p-4 md:p-6 space-y-6">
         <div className="flex items-center justify-between">
           <div>
             <Skeleton className="h-8 w-56 mb-2" />
@@ -69,7 +69,7 @@ export default function AdminDashboardPage() {
 
   if (error) {
     return (
-      <div className="w-full">
+      <div className="max-w-[1240px] mx-auto p-4 md:p-6">
         <h1 className="text-2xl font-bold text-[#18181B] mb-6">Platform Overview</h1>
         <Card className="text-center py-12 border border-[#E5E7EB]">
           <p className="text-sm text-red-500 mb-4">{error}</p>
@@ -85,7 +85,7 @@ export default function AdminDashboardPage() {
   }
 
   return (
-    <div className="w-full space-y-6 relative pb-12">
+    <div className="max-w-[1240px] mx-auto space-y-6 relative pb-12">
       {/* Top Header Bar */}
       <div className="flex items-center justify-between bg-transparent py-2">
         <button
