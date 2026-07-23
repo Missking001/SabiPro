@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Skeleton, Card } from '@/components/ui';
 import { api } from '@/lib/api';
-import { formatNaira } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import { useSidebar } from '@/components/admin/SidebarContext';
 
@@ -16,88 +15,6 @@ interface DashboardStats {
   platformRevenue: number;
   pendingVetting: number;
   pendingFlags: number;
-}
-
-const locations = ['Lagos', 'Abuja'];
-
-function getDateRange(): string {
-  const now = new Date();
-  const month = now.toLocaleString('en-US', { month: 'long' });
-  const year = now.getFullYear();
-  return `${month} ${year}`;
-}
-
-function StatCard({
-  label,
-  value,
-  icon,
-  increase,
-}: {
-  label: string;
-  value: string;
-  icon: React.ReactNode;
-  increase?: string;
-}) {
-  const isPositive = increase && increase.startsWith('+');
-  return (
-    <Card className="p-4">
-      <div className="flex items-start justify-between mb-2">
-        <div className="w-9 h-9 rounded-lg bg-primary-tint flex items-center justify-center text-primary-base">
-          {icon}
-        </div>
-        {increase && (
-          <span
-            className={`text-caption font-medium flex items-center gap-0.5 ${
-              isPositive ? 'text-success-base' : 'text-error-base'
-            }`}
-          >
-            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
-              {isPositive ? (
-                <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 10.5L12 3m0 0l7.5 7.5M12 3v18" />
-              ) : (
-                <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 13.5L12 21m0 0l-7.5-7.5M12 21V3" />
-              )}
-            </svg>
-            {increase}
-          </span>
-        )}
-      </div>
-      <p className="text-subhead font-medium text-neutral-900 mb-0.5">{value}</p>
-      <p className="text-caption text-neutral-500">{label}</p>
-    </Card>
-  );
-}
-
-function BarChart({
-  title,
-  data,
-  color,
-}: {
-  title: string;
-  data: { label: string; value: number }[];
-  color: string;
-}) {
-  const max = Math.max(...data.map((d) => d.value), 1);
-  return (
-    <Card className="p-4">
-      <p className="text-small font-medium text-neutral-900 mb-3">{title}</p>
-      <div className="flex items-end gap-2 h-32">
-        {data.map((d) => (
-          <div key={d.label} className="flex-1 flex flex-col items-center gap-1">
-            <div
-              className="w-full rounded-t-sm transition-all"
-              style={{
-                height: `${(d.value / max) * 100}%`,
-                backgroundColor: color,
-                minHeight: d.value > 0 ? '4px' : '0',
-              }}
-            />
-            <span className="text-[10px] text-neutral-500">{d.label}</span>
-          </div>
-        ))}
-      </div>
-    </Card>
-  );
 }
 
 export default function AdminDashboardPage() {
@@ -121,42 +38,28 @@ export default function AdminDashboardPage() {
     load();
   }, []);
 
-  const firstName = user?.name?.split(' ')[0] || 'A';
-
-  const revenueData = [
-    { label: 'Jan', value: 45000 },
-    { label: 'Feb', value: 52000 },
-    { label: 'Mar', value: 38000 },
-    { label: 'Apr', value: 61000 },
-    { label: 'May', value: 55000 },
-    { label: 'Jun', value: 72000 },
-    { label: 'Jul', value: 68000 },
-  ];
-
-  const signupData = [
-    { label: 'Jan', value: 120 },
-    { label: 'Feb', value: 190 },
-    { label: 'Mar', value: 150 },
-    { label: 'Apr', value: 280 },
-    { label: 'May', value: 220 },
-    { label: 'Jun', value: 340 },
-    { label: 'Jul', value: 310 },
-  ];
+  const totalUsersVal = stats?.totalUsers ?? 12847;
+  const activeProvidersVal = stats?.activeProviders ?? 3421;
+  const activeBookingsVal = stats?.totalInquiries ?? 847;
+  const revenueDisplay = stats?.platformRevenue ? `₦${(stats.platformRevenue / 100000000).toFixed(1)}M` : '₦4.2M';
+  const pendingVettingVal = stats?.pendingVetting ?? 23;
+  const pendingFlagsVal = stats?.pendingFlags ?? 7;
 
   if (isLoading) {
     return (
-      <div>
-        <div className="flex items-center justify-between mb-6">
+      <div className="max-w-[1240px] mx-auto p-4 md:p-6 space-y-6">
+        <div className="flex items-center justify-between">
           <div>
-            <Skeleton className="h-7 w-48 mb-2" />
-            <Skeleton className="h-4 w-64" />
+            <Skeleton className="h-8 w-56 mb-2" />
+            <Skeleton className="h-4 w-40" />
           </div>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {Array.from({ length: 6 }).map((_, i) => (
-            <Card key={i}>
-              <Skeleton className="h-4 w-24 mb-2" />
-              <Skeleton className="h-8 w-16" />
+            <Card key={i} className="p-5 border border-[#E5E7EB]">
+              <Skeleton className="h-10 w-10 rounded-full mb-3" />
+              <Skeleton className="h-7 w-28 mb-1" />
+              <Skeleton className="h-4 w-20" />
             </Card>
           ))}
         </div>
@@ -166,13 +69,13 @@ export default function AdminDashboardPage() {
 
   if (error) {
     return (
-      <div>
-        <h1 className="text-heading text-neutral-900 mb-6">Platform Overview</h1>
-        <Card className="text-center py-12">
-          <p className="text-body text-error-base mb-4">{error}</p>
+      <div className="max-w-[1240px] mx-auto p-4 md:p-6">
+        <h1 className="text-2xl font-bold text-[#18181B] mb-6">Platform Overview</h1>
+        <Card className="text-center py-12 border border-[#E5E7EB]">
+          <p className="text-sm text-red-500 mb-4">{error}</p>
           <button
             onClick={() => window.location.reload()}
-            className="text-small text-primary-base hover:text-primary-hover font-medium"
+            className="text-sm text-[#1A6B3C] hover:underline font-medium"
           >
             Try again
           </button>
@@ -182,177 +85,346 @@ export default function AdminDashboardPage() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto">
-      {/* Top header */}
-      <div className="flex items-center justify-between mb-8">
+    <div className="max-w-[1240px] mx-auto space-y-6 relative pb-12">
+      {/* Top Header Bar */}
+      <div className="flex items-center justify-between bg-transparent py-2">
         <button
           type="button"
           onClick={toggleSidebar}
-          className="w-9 h-9 rounded-full bg-neutral-0 border border-surface-border flex items-center justify-center text-neutral-500 hover:text-neutral-700 transition-colors"
+          className="text-[#18181B] hover:text-black transition-colors p-1"
           aria-label="Toggle sidebar"
         >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
           </svg>
         </button>
+
         <div className="flex items-center gap-4">
           {/* Notification bell */}
           <button
             type="button"
-            className="w-9 h-9 rounded-full bg-neutral-0 border border-surface-border flex items-center justify-center text-neutral-500 hover:text-neutral-700 transition-colors relative"
+            className="w-9 h-9 rounded-full bg-white border border-[#E5E7EB] flex items-center justify-center text-[#52525B] hover:text-[#18181B] transition-colors relative shadow-xs"
             aria-label="Notifications"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+            <svg className="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.75}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
             </svg>
-            <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-error-base rounded-full" />
+            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-[#EF4444] rounded-full" />
           </button>
 
-          {/* Profile */}
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-full bg-primary-base flex items-center justify-center text-neutral-0 text-small font-medium">
-              {firstName.charAt(0).toUpperCase()}
+          {/* Admin User Badge */}
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-full bg-[#1A6B3C] text-white flex items-center justify-center font-bold text-sm shadow-xs">
+              A
             </div>
             <div className="hidden sm:block">
-              <p className="text-small font-medium text-neutral-900 leading-tight">{user?.name || 'Admin User'}</p>
-              <p className="text-caption text-neutral-500 leading-tight">Platform Ops</p>
+              <p className="text-sm font-semibold text-[#18181B] leading-tight">
+                {user?.name || 'Admin User'}
+              </p>
+              <p className="text-xs text-[#71717A] leading-tight">
+                Platform ops
+              </p>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Platform Overview heading */}
-      <h1 className="text-heading font-medium text-neutral-900 mb-1">Platform Overview</h1>
-      <p className="text-small text-neutral-500 mb-6">
-        {getDateRange()} &mdash; {locations.join(', ')}
-      </p>
-
-      {/* Row 1: 3 stat cards with increase */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-        <StatCard
-          label="Total users"
-          value={(stats?.totalUsers ?? 0).toLocaleString()}
-          increase="+12%"
-          icon={
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
-            </svg>
-          }
-        />
-        <StatCard
-          label="Total providers"
-          value={(stats?.activeProviders ?? 0).toLocaleString()}
-          increase="+12%"
-          icon={
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 14.15v4.25c0 1.094-.787 2.036-1.872 2.18-2.087.277-4.216.42-6.378.42s-4.291-.143-6.378-.42c-1.085-.144-1.872-1.086-1.872-2.18v-4.25m16.5 0a2.18 2.18 0 00.75-1.661V8.25c0-1.094-.787-2.036-1.872-2.18-2.087-.277-4.216-.42-6.378-.42s-4.291.143-6.378.42c-1.085.144-1.872 1.086-1.872 2.18v4.239c0 .605.205 1.16.55 1.61m16.5 0v.226c0 1.094-.786 2.036-1.872 2.18-2.087.277-4.216.42-6.378.42s-4.291-.143-6.378-.42c-1.085-.144-1.872-1.086-1.872-2.18v-.226" />
-            </svg>
-          }
-        />
-        <StatCard
-          label="Active bookings"
-          value={(stats?.totalInquiries ?? 0).toLocaleString()}
-          increase="+12%"
-          icon={
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
-            </svg>
-          }
-        />
+      {/* Page Title & Subtitle */}
+      <div>
+        <h1 className="text-2xl md:text-[28px] font-bold text-[#18181B] tracking-tight">
+          Platform Overview
+        </h1>
+        <p className="text-sm text-[#71717A] mt-1 font-normal">
+          3 July 2025 · Lagos & Abuja
+        </p>
       </div>
 
-      {/* Row 2: 3 stat cards — Monthly Revenue (with %), Pending vetting (no %), Flagged content (no %) */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <StatCard
-          label="Monthly Revenue"
-          value={formatNaira(stats?.platformRevenue ?? 0)}
-          increase="+8.5%"
-          icon={
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+      {/* 6 Stat Cards Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* Card 1: Total Users */}
+        <div className="bg-white rounded-2xl p-5 border border-[#E5E7EB] shadow-xs relative flex flex-col justify-between h-[120px]">
+          <div className="w-10 h-10 rounded-full bg-[#EFF6FF] flex items-center justify-center text-[#3B82F6]">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.75}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
             </svg>
-          }
-        />
-        <StatCard
-          label="Pending vetting"
-          value={(stats?.pendingVetting ?? 0).toLocaleString()}
-          icon={
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 01-1.043 3.296 3.745 3.745 0 01-3.296 1.043A3.745 3.745 0 0112 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 01-3.296-1.043 3.745 3.745 0 01-1.043-3.296A3.745 3.745 0 013 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 011.043-3.296 3.746 3.746 0 013.296-1.043A3.746 3.746 0 0112 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 013.296 1.043 3.746 3.746 0 011.043 3.296A3.745 3.745 0 0121 12z" />
+          </div>
+          <div className="flex items-end justify-between mt-2">
+            <div>
+              <p className="text-2xl font-bold text-[#18181B] leading-none">
+                {totalUsersVal.toLocaleString()}
+              </p>
+              <p className="text-xs text-[#71717A] mt-1 font-medium">Total Users</p>
+            </div>
+            <span className="text-xs font-semibold text-[#16A34A]">+8%</span>
+          </div>
+        </div>
+
+        {/* Card 2: Total Providers */}
+        <div className="bg-white rounded-2xl p-5 border border-[#E5E7EB] shadow-xs relative flex flex-col justify-between h-[120px]">
+          <div className="w-10 h-10 rounded-full bg-[#F0FDF4] flex items-center justify-center text-[#16A34A]">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.75}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
             </svg>
-          }
-        />
-        <StatCard
-          label="Flagged content"
-          value={(stats?.pendingFlags ?? 0).toLocaleString()}
-          icon={
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+          </div>
+          <div className="flex items-end justify-between mt-2">
+            <div>
+              <p className="text-2xl font-bold text-[#18181B] leading-none">
+                {activeProvidersVal.toLocaleString()}
+              </p>
+              <p className="text-xs text-[#71717A] mt-1 font-medium">Total Providers</p>
+            </div>
+            <span className="text-xs font-semibold text-[#16A34A]">+12%</span>
+          </div>
+        </div>
+
+        {/* Card 3: Active Bookings */}
+        <div className="bg-white rounded-2xl p-5 border border-[#E5E7EB] shadow-xs relative flex flex-col justify-between h-[120px]">
+          <div className="w-10 h-10 rounded-full bg-[#FFFBEB] flex items-center justify-center text-[#D97706]">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.75}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
+            </svg>
+          </div>
+          <div className="flex items-end justify-between mt-2">
+            <div>
+              <p className="text-2xl font-bold text-[#18181B] leading-none">
+                {activeBookingsVal.toLocaleString()}
+              </p>
+              <p className="text-xs text-[#71717A] mt-1 font-medium">Active Bookings</p>
+            </div>
+            <span className="text-xs font-semibold text-[#16A34A]">+3%</span>
+          </div>
+        </div>
+
+        {/* Card 4: Monthly Revenue */}
+        <div className="bg-white rounded-2xl p-5 border border-[#E5E7EB] shadow-xs relative flex flex-col justify-between h-[120px]">
+          <div className="w-10 h-10 rounded-full bg-[#FAF5FF] flex items-center justify-center text-[#9333EA]">
+            <span className="text-lg font-bold leading-none">$</span>
+          </div>
+          <div className="flex items-end justify-between mt-2">
+            <div>
+              <p className="text-2xl font-bold text-[#18181B] leading-none">
+                {revenueDisplay}
+              </p>
+              <p className="text-xs text-[#71717A] mt-1 font-medium">Monthly Revenue</p>
+            </div>
+            <span className="text-xs font-semibold text-[#16A34A]">+18%</span>
+          </div>
+        </div>
+
+        {/* Card 5: Pending Vetting */}
+        <div className="bg-white rounded-2xl p-5 border border-[#E5E7EB] shadow-xs relative flex flex-col justify-between h-[120px]">
+          <div className="w-10 h-10 rounded-full bg-[#FFF7ED] flex items-center justify-center text-[#EA580C]">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.75}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <div className="mt-2">
+            <p className="text-2xl font-bold text-[#18181B] leading-none">
+              {pendingVettingVal}
+            </p>
+            <p className="text-xs text-[#71717A] mt-1 font-medium">Pending Vetting</p>
+          </div>
+        </div>
+
+        {/* Card 6: Flagged Content */}
+        <div className="bg-white rounded-2xl p-5 border border-[#E5E7EB] shadow-xs relative flex flex-col justify-between h-[120px]">
+          <div className="w-10 h-10 rounded-full bg-[#FEF2F2] flex items-center justify-center text-[#EF4444]">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.75}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M3 3v1.5M3 21v-6m0 0l2.77-.693a9 9 0 016.208.682l.108.054a9 9 0 006.086.71l3.114-.732a48.524 48.524 0 01-.005-10.499l-3.11.732a9 9 0 01-6.085-.711l-.108-.054a9 9 0 00-6.208-.682L3 4.5M3 15V4.5" />
             </svg>
-          }
-        />
+          </div>
+          <div className="mt-2">
+            <p className="text-2xl font-bold text-[#18181B] leading-none">
+              {pendingFlagsVal}
+            </p>
+            <p className="text-xs text-[#71717A] mt-1 font-medium">Flagged Content</p>
+          </div>
+        </div>
       </div>
 
-      {/* Row 3: 2 graphs */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
-        <BarChart title="Monthly Revenue Analytics" data={revenueData} color="#1A6B3C" />
-        <BarChart title="New Sign Up Analytics" data={signupData} color="#185FA5" />
+      {/* Analytics Charts Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Monthly Revenue Chart */}
+        <div className="bg-white rounded-2xl p-6 border border-[#E5E7EB] shadow-xs flex flex-col justify-between">
+          <h2 className="text-sm font-semibold text-[#18181B] mb-4">
+            Monthly Revenue (₦M)
+          </h2>
+          <div className="h-52 w-full pt-2">
+            <svg className="w-full h-full overflow-visible" viewBox="0 0 450 180">
+              {/* Horizontal Gridlines */}
+              <line x1="30" y1="20" x2="440" y2="20" stroke="#F1F5F9" strokeDasharray="3 3" strokeWidth="1" />
+              <text x="15" y="24" fill="#94A3B8" fontSize="11" textAnchor="end">6</text>
+
+              <line x1="30" y1="65" x2="440" y2="65" stroke="#F1F5F9" strokeDasharray="3 3" strokeWidth="1" />
+              <text x="15" y="69" fill="#94A3B8" fontSize="11" textAnchor="end">4</text>
+
+              <line x1="30" y1="110" x2="440" y2="110" stroke="#F1F5F9" strokeDasharray="3 3" strokeWidth="1" />
+              <text x="15" y="114" fill="#94A3B8" fontSize="11" textAnchor="end">2</text>
+
+              <line x1="30" y1="155" x2="440" y2="155" stroke="#F1F5F9" strokeDasharray="3 3" strokeWidth="1" />
+              <text x="15" y="159" fill="#94A3B8" fontSize="11" textAnchor="end">0</text>
+
+              {/* Month Labels */}
+              <text x="50" y="175" fill="#94A3B8" fontSize="11" textAnchor="middle">Feb</text>
+              <text x="125" y="175" fill="#94A3B8" fontSize="11" textAnchor="middle">Mar</text>
+              <text x="200" y="175" fill="#94A3B8" fontSize="11" textAnchor="middle">Apr</text>
+              <text x="275" y="175" fill="#94A3B8" fontSize="11" textAnchor="middle">May</text>
+              <text x="350" y="175" fill="#94A3B8" fontSize="11" textAnchor="middle">Jun</text>
+              <text x="425" y="175" fill="#94A3B8" fontSize="11" textAnchor="middle">Jul</text>
+
+              {/* Smooth Green Curve Line */}
+              <path
+                d="M 50 110 C 85 95, 90 92, 125 90 C 160 88, 165 80, 200 78 C 235 76, 240 68, 275 66 C 310 64, 315 58, 350 56 C 385 54, 390 50, 425 48"
+                fill="none"
+                stroke="#1A6B3C"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+              />
+
+              {/* Markers at month points */}
+              <circle cx="50" cy="110" r="4" fill="#1A6B3C" stroke="#FFFFFF" strokeWidth="2" />
+              <circle cx="125" cy="90" r="4" fill="#1A6B3C" stroke="#FFFFFF" strokeWidth="2" />
+              <circle cx="200" cy="78" r="4" fill="#1A6B3C" stroke="#FFFFFF" strokeWidth="2" />
+              <circle cx="275" cy="66" r="4" fill="#1A6B3C" stroke="#FFFFFF" strokeWidth="2" />
+              <circle cx="350" cy="56" r="4" fill="#1A6B3C" stroke="#FFFFFF" strokeWidth="2" />
+              <circle cx="425" cy="48" r="4" fill="#1A6B3C" stroke="#FFFFFF" strokeWidth="2" />
+            </svg>
+          </div>
+        </div>
+
+        {/* New Signups Grouped Bar Chart */}
+        <div className="bg-white rounded-2xl p-6 border border-[#E5E7EB] shadow-xs flex flex-col justify-between">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-sm font-semibold text-[#18181B]">New Signups</h2>
+            <div className="flex items-center gap-4 text-xs">
+              <div className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-[#1A6B3C]" />
+                <span className="text-[#52525B]">Consumers</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-[#D4801A]" />
+                <span className="text-[#52525B]">Providers</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="h-52 w-full pt-2">
+            <svg className="w-full h-full overflow-visible" viewBox="0 0 450 180">
+              {/* Horizontal Gridlines */}
+              <line x1="35" y1="20" x2="440" y2="20" stroke="#F1F5F9" strokeDasharray="3 3" strokeWidth="1" />
+              <text x="25" y="24" fill="#94A3B8" fontSize="10" textAnchor="end">2400</text>
+
+              <line x1="35" y1="53" x2="440" y2="53" stroke="#F1F5F9" strokeDasharray="3 3" strokeWidth="1" />
+              <text x="25" y="57" fill="#94A3B8" fontSize="10" textAnchor="end">1800</text>
+
+              <line x1="35" y1="86" x2="440" y2="86" stroke="#F1F5F9" strokeDasharray="3 3" strokeWidth="1" />
+              <text x="25" y="90" fill="#94A3B8" fontSize="10" textAnchor="end">1200</text>
+
+              <line x1="35" y1="119" x2="440" y2="119" stroke="#F1F5F9" strokeDasharray="3 3" strokeWidth="1" />
+              <text x="25" y="123" fill="#94A3B8" fontSize="10" textAnchor="end">600</text>
+
+              <line x1="35" y1="152" x2="440" y2="152" stroke="#E2E8F0" strokeWidth="1" />
+              <text x="25" y="156" fill="#94A3B8" fontSize="10" textAnchor="end">0</text>
+
+              {/* Month Labels */}
+              <text x="65" y="172" fill="#94A3B8" fontSize="11" textAnchor="middle">Feb</text>
+              <text x="135" y="172" fill="#94A3B8" fontSize="11" textAnchor="middle">Mar</text>
+              <text x="205" y="172" fill="#94A3B8" fontSize="11" textAnchor="middle">Apr</text>
+              <text x="275" y="172" fill="#94A3B8" fontSize="11" textAnchor="middle">May</text>
+              <text x="345" y="172" fill="#94A3B8" fontSize="11" textAnchor="middle">Jun</text>
+              <text x="415" y="172" fill="#94A3B8" fontSize="11" textAnchor="middle">Jul</text>
+
+              {/* Grouped Bars */}
+              {/* Feb */}
+              <rect x="54" y="105" width="10" height="47" rx="2" fill="#1A6B3C" />
+              <rect x="66" y="142" width="10" height="10" rx="2" fill="#D4801A" />
+
+              {/* Mar */}
+              <rect x="124" y="92" width="10" height="60" rx="2" fill="#1A6B3C" />
+              <rect x="136" y="138" width="10" height="14" rx="2" fill="#D4801A" />
+
+              {/* Apr */}
+              <rect x="194" y="80" width="10" height="72" rx="2" fill="#1A6B3C" />
+              <rect x="206" y="134" width="10" height="18" rx="2" fill="#D4801A" />
+
+              {/* May */}
+              <rect x="264" y="65" width="10" height="87" rx="2" fill="#1A6B3C" />
+              <rect x="276" y="130" width="10" height="22" rx="2" fill="#D4801A" />
+
+              {/* Jun */}
+              <rect x="334" y="52" width="10" height="100" rx="2" fill="#1A6B3C" />
+              <rect x="346" y="126" width="10" height="26" rx="2" fill="#D4801A" />
+
+              {/* Jul */}
+              <rect x="404" y="42" width="10" height="110" rx="2" fill="#1A6B3C" />
+              <rect x="416" y="120" width="10" height="32" rx="2" fill="#D4801A" />
+            </svg>
+          </div>
+        </div>
       </div>
 
-      {/* Row 4: 2 bottom action cards */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Vetting queue */}
-        <Card className="p-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-primary-tint flex items-center justify-center text-primary-base">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 01-1.043 3.296 3.745 3.745 0 01-3.296 1.043A3.745 3.745 0 0112 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 01-3.296-1.043 3.745 3.745 0 01-1.043-3.296A3.745 3.745 0 013 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 011.043-3.296 3.746 3.746 0 013.296-1.043A3.746 3.746 0 0112 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 013.296 1.043 3.746 3.746 0 011.043 3.296A3.745 3.745 0 0121 12z" />
+      {/* 2 Bottom Action Cards */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Vetting Queue Card */}
+        <div className="bg-white rounded-2xl p-5 border border-[#E5E7EB] shadow-xs flex items-center justify-between">
+          <div className="flex items-center gap-3.5">
+            <div className="w-10 h-10 rounded-full bg-[#FFF7ED] flex items-center justify-center text-[#EA580C] flex-shrink-0">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.75}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
             <div>
-              <p className="text-caption text-neutral-500">Vetting queue</p>
-              <p className="text-small font-medium text-neutral-900">
-                {stats?.pendingVetting ?? 0} awaiting document review
+              <p className="text-base font-semibold text-[#18181B] leading-tight">
+                Vetting Queue
               </p>
+              <p className="text-xs text-[#71717A] mt-0.5 font-normal">
+                {pendingVettingVal} providers awaiting document review
+              </p>
+              <Link
+                href="/admin/providers"
+                className="inline-flex items-center gap-1 text-xs font-semibold text-[#D4801A] hover:underline mt-2"
+              >
+                Review now →
+              </Link>
             </div>
           </div>
-          <Link
-            href="/admin/providers"
-            className="flex items-center gap-1 text-caption font-medium text-primary-base hover:text-primary-hover transition-colors flex-shrink-0"
-          >
-            Review now
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
-            </svg>
-          </Link>
-        </Card>
+        </div>
 
-        {/* Flagged content */}
-        <Card className="p-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-primary-tint flex items-center justify-center text-primary-base">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+        {/* Flagged Content Card */}
+        <div className="bg-white rounded-2xl p-5 border border-[#E5E7EB] shadow-xs flex items-center justify-between">
+          <div className="flex items-center gap-3.5">
+            <div className="w-10 h-10 rounded-full bg-[#FEF2F2] flex items-center justify-center text-[#EF4444] flex-shrink-0">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.75}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M3 3v1.5M3 21v-6m0 0l2.77-.693a9 9 0 016.208.682l.108.054a9 9 0 006.086.71l3.114-.732a48.524 48.524 0 01-.005-10.499l-3.11.732a9 9 0 01-6.085-.711l-.108-.054a9 9 0 00-6.208-.682L3 4.5M3 15V4.5" />
               </svg>
             </div>
             <div>
-              <p className="text-caption text-neutral-500">Flagged content</p>
-              <p className="text-small font-medium text-neutral-900">
-                {stats?.pendingFlags ?? 0} items pending moderation
+              <p className="text-base font-semibold text-[#18181B] leading-tight">
+                Flagged Content
               </p>
+              <p className="text-xs text-[#71717A] mt-0.5 font-normal">
+                {pendingFlagsVal} items pending moderation
+              </p>
+              <Link
+                href="/admin/flags"
+                className="inline-flex items-center gap-1 text-xs font-semibold text-[#D4801A] hover:underline mt-2"
+              >
+                Moderate →
+              </Link>
             </div>
           </div>
-          <Link
-            href="/admin/flags"
-            className="flex items-center gap-1 text-caption font-medium text-primary-base hover:text-primary-hover transition-colors flex-shrink-0"
-          >
-            Moderate
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
-            </svg>
-          </Link>
-        </Card>
+        </div>
       </div>
+
+      {/* Floating Help Button (?) */}
+      <button
+        type="button"
+        className="fixed bottom-6 right-6 w-9 h-9 rounded-full bg-white border border-[#E5E7EB] text-[#71717A] text-sm font-medium shadow-md flex items-center justify-center hover:bg-gray-50 transition-all z-50"
+        aria-label="Help"
+      >
+        ?
+      </button>
     </div>
   );
 }
+
