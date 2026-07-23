@@ -358,12 +358,16 @@ export default function ProviderProfilePage() {
                 onChange={(e) => setPriceRangeMin(e.target.value)}
               />
               <Input
+                id="max-price-input"
                 label="Max. price (₦)"
                 type="number"
                 placeholder="25,000"
                 value={priceRangeMax}
                 onChange={(e) => setPriceRangeMax(e.target.value)}
               />
+              <p className="text-caption text-error-base mt-1" id="price-debug">
+                DB value: {provider?.priceRangeMax ?? 'null'} &middot; display: {priceRangeMax || '(empty)'}
+              </p>
             </div>
           </div>
 
