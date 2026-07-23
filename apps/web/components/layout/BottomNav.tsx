@@ -8,8 +8,7 @@ export function BottomNav() {
   const pathname = usePathname();
   const { user, isAuthenticated } = useAuth();
 
-  // Hide on landing page, login, and register pages
-  if (!isAuthenticated || pathname === '/' || pathname === '/login' || pathname === '/register') return null;
+  if (!isAuthenticated || pathname === '/' || pathname === '/login' || pathname === '/register' || pathname.startsWith('/admin')) return null;
 
   const isConsumer = user?.role !== 'PROVIDER' && user?.role !== 'ADMIN';
 
