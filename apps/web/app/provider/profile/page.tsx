@@ -29,6 +29,7 @@ export default function ProviderProfilePage() {
   const [isFetching, setIsFetching] = useState(true);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [uploadingPortfolio, setUploadingPortfolio] = useState(false);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [providerId, setProviderId] = useState('');
 
   const avatarInputRef = useRef<HTMLInputElement>(null);
@@ -130,9 +131,9 @@ export default function ProviderProfilePage() {
 
     try {
       const res = await api.uploads.avatar(file);
-      const avatarUrl = res.data?.url;
-      if (avatarUrl) {
-        setProvider((prev) => prev ? { ...prev, user: { ...prev.user, avatarUrl } } : prev);
+      const url = res.data && res.data.url;
+      if (url) {
+        setAvatarPreview(url);
       }
       setSuccess('Profile photo updated');
     } catch (err) {
@@ -227,10 +228,10 @@ export default function ProviderProfilePage() {
             <h2 className="text-small font-semibold text-neutral-900 mb-3">Profile photo</h2>
             <div className="flex items-center gap-4">
               <div className="w-14 h-14 rounded-xl bg-neutral-800 text-white flex items-center justify-center font-bold text-lg overflow-hidden relative border border-surface-border flex-shrink-0">
-                {provider?.user?.avatarUrl ? (
+                {(avatarPreview || provider?.user?.avatarUrl) ? (
                   <Image
-                    src={provider.user.avatarUrl}
-                    alt={provider.user.name}
+                    src={avatarPreview || provider!.user.avatarUrl!}
+                    alt={provider?.user?.name || 'Provider'}
                     fill
                     className="object-cover"
                   />
