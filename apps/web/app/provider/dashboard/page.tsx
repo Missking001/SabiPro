@@ -260,18 +260,28 @@ export default function ProviderDashboardPage() {
         </div>
 
         {/* Profile Completion Bar matching mockup */}
-        <div className="bg-[#FFFDF7] border border-amber-200/80 rounded-card p-4 shadow-xs">
+        <div className={`rounded-card p-4 shadow-xs border ${
+          completionPercentage === 100
+            ? 'bg-[#EAF5EE] border-[#9FE1CB]'
+            : 'bg-[#FFFDF7] border-amber-200/80'
+        }`}>
           <div className="flex items-center justify-between mb-2">
             <span className="text-small font-medium text-neutral-900">Profile completion</span>
             <span className="text-small font-semibold text-neutral-900">{completionPercentage}%</span>
           </div>
-          <div className="w-full bg-amber-100/60 rounded-full h-2 overflow-hidden mb-2">
+          <div className={`w-full rounded-full h-2 overflow-hidden mb-2 ${
+            completionPercentage === 100 ? 'bg-[#9FE1CB]/60' : 'bg-amber-100/60'
+          }`}>
             <div
-              className="bg-amber-600 h-full rounded-full transition-all duration-500"
+              className={`h-full rounded-full transition-all duration-500 ${
+                completionPercentage === 100 ? 'bg-[#1D9E75]' : 'bg-amber-600'
+              }`}
               style={{ width: `${completionPercentage}%` }}
             />
           </div>
-          <p className="text-caption text-amber-900/80 font-normal">
+          <p className={`text-caption font-normal ${
+            completionPercentage === 100 ? 'text-[#0F6E56]' : 'text-amber-900/80'
+          }`}>
             {missingTips.length > 0
               ? missingTips[0]
               : 'Your profile is 100% complete! Profiles with full details receive 3x more inquiries.'}
