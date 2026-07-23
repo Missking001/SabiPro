@@ -78,7 +78,7 @@ export function AdminSidebar() {
               alt="SabiPro"
               width={32}
               height={32}
-              className="h-8 w-auto object-contain flex-shrink-0"
+              className="h-8 w-auto object-contain flex-shrink-0 brightness-0 invert"
               priority
             />
           ) : (
@@ -88,7 +88,7 @@ export function AdminSidebar() {
                 alt="SabiPro"
                 width={130}
                 height={36}
-                className="h-9 w-auto object-contain flex-shrink-0 brightness-110"
+                className="h-9 w-auto object-contain flex-shrink-0 brightness-0 invert"
                 priority
               />
               <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-[#1A6B3C] text-white uppercase tracking-wider">
