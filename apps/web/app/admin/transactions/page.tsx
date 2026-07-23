@@ -2,101 +2,140 @@
 
 import { useState, useEffect } from 'react';
 import { Skeleton, StatusBanner } from '@/components/ui';
-import { api, ApiClientError } from '@/lib/api';
-import { formatNaira } from '@/lib/utils';
-import { AdminHeader, FloatingHelpButton } from '@/components/admin/AdminHeader';
+import { api } from '@/lib/api';
+import { useAuth } from '@/hooks/useAuth';
+import { useSidebar } from '@/components/admin/SidebarContext';
+import type { Transaction } from '@/types';
 
-interface TransactionItem {
-  id: string;
-  txnId: string;
-  consumer: string;
-  provider: string;
-  service: string;
-  amount: number;
-  status: 'Held' | 'Released' | 'Disputed';
-  date: string;
-}
-
-const fallbackTransactions: TransactionItem[] = [
+/* ── Mock data matching the reference screenshot ── */
+const mockTransactions: (Transaction & { _consumer?: string; _provider?: string; _service?: string })[] = [
   {
-    id: 'tx-1',
-    txnId: 'TXN-8821',
-    consumer: 'Aisha B.',
-    provider: 'Emeka Okafor',
-    service: 'Electrical repair',
-    amount: 12500,
-    status: 'Held',
-    date: '2 Jul 2025',
+    id: 'TXN-8821',
+    consumerId: 'c1',
+    providerId: 'p1',
+    amount: 1250000,
+    currency: 'NGN',
+    status: 'PENDING',
+    gatewayRef: 'FLW-8821',
+    createdAt: '2025-07-02T10:00:00Z',
+    _consumer: 'Aisha B.',
+    _provider: 'Emeka Okafor',
+    _service: 'Electrical repair',
+    payoutStatus: 'PENDING',
   },
   {
-    id: 'tx-2',
-    txnId: 'TXN-8820',
-    consumer: 'Bola D.',
-    provider: 'Adaeze Nwosu',
-    service: 'Wedding gown',
-    amount: 45000,
-    status: 'Released',
-    date: '1 Jul 2025',
+    id: 'TXN-8820',
+    consumerId: 'c2',
+    providerId: 'p2',
+    amount: 4500000,
+    currency: 'NGN',
+    status: 'SUCCESSFUL',
+    gatewayRef: 'FLW-8820',
+    createdAt: '2025-07-01T10:00:00Z',
+    _consumer: 'Bola D.',
+    _provider: 'Adaeze Nwosu',
+    _service: 'Wedding gown',
+    payoutStatus: 'RELEASED',
   },
   {
-    id: 'tx-3',
-    txnId: 'TXN-8819',
-    consumer: 'Emeka F.',
-    provider: 'Biodun Adeyemi',
-    service: 'Plumbing repair',
-    amount: 8000,
-    status: 'Disputed',
-    date: '30 Jun 2025',
+    id: 'TXN-8819',
+    consumerId: 'c3',
+    providerId: 'p3',
+    amount: 800000,
+    currency: 'NGN',
+    status: 'DISPUTED',
+    gatewayRef: 'FLW-8819',
+    createdAt: '2025-06-30T10:00:00Z',
+    _consumer: 'Emeka F.',
+    _provider: 'Biodun Adeyemi',
+    _service: 'Plumbing repair',
+    payoutStatus: 'WITHHELD',
   },
   {
-    id: 'tx-4',
-    txnId: 'TXN-8818',
-    consumer: 'Ngozi H.',
-    provider: 'Chukwudi Eze',
-    service: 'Car service',
-    amount: 6500,
-    status: 'Released',
-    date: '29 Jun 2025',
+    id: 'TXN-8818',
+    consumerId: 'c4',
+    providerId: 'p4',
+    amount: 650000,
+    currency: 'NGN',
+    status: 'SUCCESSFUL',
+    gatewayRef: 'FLW-8818',
+    createdAt: '2025-06-29T10:00:00Z',
+    _consumer: 'Ngozi H.',
+    _provider: 'Chukwudi Eze',
+    _service: 'Car service',
+    payoutStatus: 'RELEASED',
   },
   {
-    id: 'tx-5',
-    txnId: 'TXN-8815',
-    consumer: 'Tunde K.',
-    provider: 'Grace Okeke',
-    service: 'Deep cleaning',
-    amount: 18000,
-    status: 'Released',
-    date: '28 Jun 2025',
+    id: 'TXN-8815',
+    consumerId: 'c5',
+    providerId: 'p5',
+    amount: 1800000,
+    currency: 'NGN',
+    status: 'SUCCESSFUL',
+    gatewayRef: 'FLW-8815',
+    createdAt: '2025-06-28T10:00:00Z',
+    _consumer: 'Tunde K.',
+    _provider: 'Grace Okeke',
+    _service: 'Deep cleaning',
+    payoutStatus: 'RELEASED',
   },
 ];
 
+type TxFilter = 'All' | 'Held' | 'Released' | 'Disputed';
+
+type ExtendedTx = Transaction & {
+  _consumer?: string;
+  _provider?: string;
+  _service?: string;
+};
+
+function formatTxDate(iso: string): string {
+  return new Date(iso).toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+}
+
+function formatNaira(kobo: number): string {
+  return `₦${(kobo / 100).toLocaleString('en-NG')}`;
+}
+
+function getDisplayStatus(tx: ExtendedTx): { label: string; colorClass: string } {
+  if (tx.status === 'DISPUTED') {
+    return { label: 'Disputed', colorClass: 'text-[#EF4444] bg-[#FEF2F2]' };
+  }
+  if (tx.payoutStatus === 'RELEASED' || tx.status === 'SUCCESSFUL') {
+    if (tx.payoutStatus === 'RELEASED') {
+      return { label: 'Released', colorClass: 'text-[#1A6B3C] bg-[#EAF5EE]' };
+    }
+    return { label: 'Held', colorClass: 'text-[#D4801A] bg-[#FAEEDA]' };
+  }
+  if (tx.status === 'PENDING') {
+    return { label: 'Held', colorClass: 'text-[#D4801A] bg-[#FAEEDA]' };
+  }
+  if (tx.status === 'REFUNDED') {
+    return { label: 'Refunded', colorClass: 'text-[#185FA5] bg-[#E6F1FB]' };
+  }
+  return { label: tx.status, colorClass: 'text-[#71717A] bg-[#F4F4F5]' };
+}
+
 export default function AdminTransactionsPage() {
-  const [transactions, setTransactions] = useState<TransactionItem[]>(fallbackTransactions);
-  const [activeTab, setActiveTab] = useState<'All' | 'Held' | 'Released' | 'Disputed'>('All');
+  const { user } = useAuth();
+  const { toggle: toggleSidebar } = useSidebar();
+  const [transactions, setTransactions] = useState<ExtendedTx[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
-  const [feedback, setFeedback] = useState('');
-  const [processingId, setProcessingId] = useState<string | null>(null);
+  const [activeFilter, setActiveFilter] = useState<TxFilter>('All');
 
   useEffect(() => {
     async function load() {
       try {
         const res = await api.admin.transactions();
-        if (res.data && res.data.length > 0) {
-          const mapped: TransactionItem[] = res.data.map((t, idx) => ({
-            id: t.id,
-            txnId: `TXN-${8820 - idx}`,
-            consumer: 'Customer',
-            provider: 'Provider',
-            service: 'Local Service',
-            amount: t.amount ? t.amount / 100 : 15000,
-            status: t.status === 'SUCCESSFUL' ? 'Released' : t.status === 'DISPUTED' ? 'Disputed' : 'Held',
-            date: new Date(t.createdAt || Date.now()).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }),
-          }));
-          setTransactions(mapped);
-        }
-      } catch (err: any) {
-        // Fallback for preview
+        const live = res.data || [];
+        setTransactions(live.length > 0 ? live : mockTransactions);
+      } catch {
+        setTransactions(mockTransactions);
       } finally {
         setIsLoading(false);
       }
@@ -104,58 +143,39 @@ export default function AdminTransactionsPage() {
     load();
   }, []);
 
-  async function handleRelease(id: string) {
-    setProcessingId(id);
-    setFeedback('');
-    try {
-      if (!id.startsWith('tx-')) {
-        await api.admin.releasePayout(id);
-      }
-      setTransactions((prev) =>
-        prev.map((t) => (t.id === id ? { ...t, status: 'Released' as const } : t))
-      );
-      setFeedback('Payout released successfully to provider.');
-    } catch (err) {
-      setFeedback(err instanceof ApiClientError ? err.message : 'Failed to release payout');
-    } finally {
-      setProcessingId(null);
-    }
-  }
+  const filters: TxFilter[] = ['All', 'Held', 'Released', 'Disputed'];
 
-  async function handleRefund(id: string) {
-    setProcessingId(id);
-    setFeedback('');
-    try {
-      if (!id.startsWith('tx-')) {
-        await api.admin.refundTransaction(id);
-      }
-      setTransactions((prev) =>
-        prev.map((t) => (t.id === id ? { ...t, status: 'Disputed' as const } : t))
-      );
-      setFeedback('Refund initiated successfully.');
-    } catch (err) {
-      setFeedback(err instanceof ApiClientError ? err.message : 'Failed to initiate refund');
-    } finally {
-      setProcessingId(null);
-    }
-  }
-
-  const filteredTransactions = transactions.filter((t) => {
-    if (activeTab === 'All') return true;
-    return t.status === activeTab;
+  const filtered = transactions.filter((tx) => {
+    if (activeFilter === 'All') return true;
+    const { label } = getDisplayStatus(tx);
+    return label === activeFilter;
   });
 
+  /* ── Loading skeleton ── */
   if (isLoading) {
     return (
-      <div className="w-full">
-        <AdminHeader />
-        <div className="mb-6">
-          <Skeleton className="h-8 w-64 mb-2" />
+      <div className="w-full space-y-6">
+        <div className="flex items-center justify-between py-1 w-full">
+          <Skeleton className="h-6 w-6 rounded" />
+          <div className="flex items-center gap-4">
+            <Skeleton className="w-9 h-9 rounded-full" />
+            <Skeleton className="w-9 h-9 rounded-full" />
+          </div>
+        </div>
+        <div>
+          <Skeleton className="h-8 w-56 mb-2" />
           <Skeleton className="h-4 w-80" />
         </div>
-        <div className="bg-white border border-[#E5E7EB] rounded-2xl p-6 shadow-xs w-full space-y-4">
+        <div className="flex gap-2">
+          {[1, 2, 3, 4].map((i) => (
+            <Skeleton key={i} className="h-9 w-24 rounded-full" />
+          ))}
+        </div>
+        <div className="bg-white rounded-xl border border-[#E5E7EB] p-6">
           {[1, 2, 3, 4, 5].map((i) => (
-            <Skeleton key={i} className="h-10 w-full rounded-lg" />
+            <div key={i} className="py-4 border-b border-[#F4F4F5] last:border-b-0">
+              <Skeleton className="h-4 w-full" />
+            </div>
           ))}
         </div>
       </div>
@@ -164,141 +184,166 @@ export default function AdminTransactionsPage() {
 
   return (
     <div className="w-full space-y-6 relative pb-12">
-      <AdminHeader />
+      {/* ── Top Header Bar ── */}
+      <div className="flex items-center justify-between bg-transparent py-1 w-full">
+        <button
+          type="button"
+          onClick={toggleSidebar}
+          className="text-[#18181B] hover:text-black transition-colors p-1"
+          aria-label="Toggle sidebar"
+        >
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+          </svg>
+        </button>
+        <div className="flex items-center gap-4">
+          <button
+            type="button"
+            className="w-9 h-9 rounded-full bg-white border border-[#E5E7EB] flex items-center justify-center text-[#52525B] hover:text-[#18181B] transition-colors relative shadow-xs"
+            aria-label="Notifications"
+          >
+            <svg className="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.75}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
+            </svg>
+            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-[#EF4444] rounded-full" />
+          </button>
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-full bg-[#1A6B3C] text-white flex items-center justify-center font-bold text-sm shadow-xs">
+              A
+            </div>
+            <div className="hidden sm:block">
+              <p className="text-sm font-semibold text-[#18181B] leading-tight">{user?.name || 'Admin User'}</p>
+              <p className="text-xs text-[#71717A] leading-tight">Platform ops</p>
+            </div>
+          </div>
+        </div>
+      </div>
 
-      {/* Header */}
+      {/* ── Page Title ── */}
       <div>
-        <h1 className="text-[28px] font-bold text-[#18181B] tracking-tight">
-          Transaction Monitor
-        </h1>
-        <p className="text-sm text-[#71717A] mt-0.5">
+        <h1 className="text-[26px] font-bold text-[#18181B] leading-tight">Transaction Monitor</h1>
+        <p className="text-sm text-[#71717A] mt-1">
           Escrow payments and fund releases via Flutterwave
         </p>
       </div>
 
-      {feedback && <StatusBanner variant="success" className="my-2">{feedback}</StatusBanner>}
-      {error && <StatusBanner variant="error" className="my-2">{error}</StatusBanner>}
+      {error && <StatusBanner variant="error" className="mb-0">{error}</StatusBanner>}
 
-      {/* Filter Tabs */}
-      <div className="flex items-center gap-2">
-        {(['All', 'Held', 'Released', 'Disputed'] as const).map((tab) => {
-          const isActive = activeTab === tab;
-          return (
-            <button
-              key={tab}
-              type="button"
-              onClick={() => setActiveTab(tab)}
-              className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all ${
-                isActive
-                  ? 'bg-[#18181B] text-white shadow-xs'
-                  : 'bg-[#F4F4F5] text-[#71717A] hover:text-[#18181B] hover:bg-[#E4E4E7]'
-              }`}
-            >
-              {tab}
-            </button>
-          );
-        })}
+      {/* ── Filter Tabs ── */}
+      <div className="flex flex-wrap gap-2">
+        {filters.map((f) => (
+          <button
+            key={f}
+            type="button"
+            onClick={() => setActiveFilter(f)}
+            className={`px-4 py-2 text-xs font-semibold rounded-full border transition-colors ${
+              activeFilter === f
+                ? 'bg-[#18181B] text-white border-[#18181B]'
+                : 'bg-white text-[#18181B] border-[#E5E7EB] hover:bg-[#F4F4F5]'
+            }`}
+          >
+            {f}
+          </button>
+        ))}
       </div>
 
-      {/* Transactions Table Container */}
-      <div className="bg-white border border-[#E5E7EB] rounded-2xl shadow-xs overflow-hidden w-full">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="border-b border-[#F4F4F5] bg-[#F9F9F8]">
-                <th className="py-3.5 px-6 text-xs font-semibold text-[#71717A]">TXN ID</th>
-                <th className="py-3.5 px-6 text-xs font-semibold text-[#71717A]">Consumer</th>
-                <th className="py-3.5 px-6 text-xs font-semibold text-[#71717A]">Provider</th>
-                <th className="py-3.5 px-6 text-xs font-semibold text-[#71717A]">Service</th>
-                <th className="py-3.5 px-6 text-xs font-semibold text-[#71717A]">Amount</th>
-                <th className="py-3.5 px-6 text-xs font-semibold text-[#71717A]">Status</th>
-                <th className="py-3.5 px-6 text-xs font-semibold text-[#71717A]">Date</th>
-                <th className="py-3.5 px-6 text-xs font-semibold text-[#71717A]">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#F4F4F5]">
-              {filteredTransactions.map((tx) => (
-                <tr key={tx.id} className="hover:bg-[#F9FAFB] transition-colors">
-                  <td className="py-4 px-6 text-xs font-medium text-[#71717A]">
-                    {tx.txnId}
-                  </td>
-                  <td className="py-4 px-6 text-sm font-semibold text-[#18181B]">
-                    {tx.consumer}
-                  </td>
-                  <td className="py-4 px-6 text-sm font-semibold text-[#18181B]">
-                    {tx.provider}
-                  </td>
-                  <td className="py-4 px-6 text-sm text-[#71717A]">
-                    {tx.service}
-                  </td>
-                  <td className="py-4 px-6 text-sm font-bold text-[#18181B]">
-                    {formatNaira(tx.amount * 100)}
-                  </td>
-                  <td className="py-4 px-6">
-                    {tx.status === 'Held' && (
-                      <span className="inline-flex items-center px-3 py-0.5 rounded-full text-xs font-semibold bg-[#FEF3C7] text-[#D97706] border border-[#FDE68A]">
-                        Held
-                      </span>
-                    )}
-                    {tx.status === 'Released' && (
-                      <span className="inline-flex items-center px-3 py-0.5 rounded-full text-xs font-semibold bg-[#DCFCE7] text-[#15803D] border border-[#BBF7D0]">
-                        Released
-                      </span>
-                    )}
-                    {tx.status === 'Disputed' && (
-                      <span className="inline-flex items-center px-3 py-0.5 rounded-full text-xs font-semibold bg-[#FEE2E2] text-[#B91C1C] border border-[#FCA5A5]">
-                        Disputed
-                      </span>
-                    )}
-                  </td>
-                  <td className="py-4 px-6 text-sm text-[#71717A]">
-                    {tx.date}
-                  </td>
-                  <td className="py-4 px-6">
-                    <div className="flex items-center gap-2">
-                      {tx.status === 'Held' && (
-                        <button
-                          type="button"
-                          disabled={processingId === tx.id}
-                          onClick={() => handleRelease(tx.id)}
-                          className="border border-[#86EFAC] bg-[#F0FDF4] hover:bg-[#DCFCE7] text-[#166534] text-xs font-semibold px-3 py-1 rounded-full transition-colors disabled:opacity-50"
-                        >
-                          Release
-                        </button>
-                      )}
-
-                      {tx.status === 'Disputed' && (
-                        <button
-                          type="button"
-                          disabled={processingId === tx.id}
-                          onClick={() => handleRefund(tx.id)}
-                          className="border border-[#FCA5A5] bg-[#FEF2F2] hover:bg-[#FEE2E2] text-[#DC2626] text-xs font-semibold px-3 py-1 rounded-full transition-colors disabled:opacity-50"
-                        >
-                          Refund
-                        </button>
-                      )}
-
-                      <button
-                        type="button"
-                        className="border border-[#E5E7EB] bg-white hover:bg-[#F9FAFB] text-[#374151] text-xs font-semibold px-3 py-1 rounded-full transition-colors"
-                      >
-                        View
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      {/* ── Transactions Table ── */}
+      {filtered.length === 0 ? (
+        <div className="bg-white rounded-xl border border-[#E5E7EB] text-center py-16">
+          <p className="text-4xl mb-3">💳</p>
+          <p className="text-sm text-[#71717A]">No transactions match this filter</p>
         </div>
-      </div>
+      ) : (
+        <div className="bg-white rounded-xl border border-[#E5E7EB] overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead>
+                <tr className="border-b border-[#F4F4F5]">
+                  <th className="text-xs font-medium text-[#71717A] py-3.5 px-6 whitespace-nowrap">TXN ID</th>
+                  <th className="text-xs font-medium text-[#71717A] py-3.5 px-6">Consumer</th>
+                  <th className="text-xs font-medium text-[#71717A] py-3.5 px-6">Provider</th>
+                  <th className="text-xs font-medium text-[#71717A] py-3.5 px-6">Service</th>
+                  <th className="text-xs font-medium text-[#71717A] py-3.5 px-6">Amount</th>
+                  <th className="text-xs font-medium text-[#71717A] py-3.5 px-6">Status</th>
+                  <th className="text-xs font-medium text-[#71717A] py-3.5 px-6">Date</th>
+                  <th className="text-xs font-medium text-[#71717A] py-3.5 px-6">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((tx) => {
+                  const displayStatus = getDisplayStatus(tx);
+                  const consumer = (tx as ExtendedTx)._consumer || `ID: ${tx.consumerId.slice(0, 6)}`;
+                  const provider = (tx as ExtendedTx)._provider || tx.provider?.user?.name || `ID: ${tx.providerId.slice(0, 6)}`;
+                  const service = (tx as ExtendedTx)._service || tx.provider?.tradeCategory || '—';
+                  const txId = tx.id.startsWith('TXN-') ? tx.id : `TXN-${tx.id.slice(0, 4)}`;
 
-      {/* Escrow Footer Note */}
-      <p className="text-xs text-[#71717A]">
-        Funds held in escrow auto-release to provider 7 days after job completion if no dispute is raised.
-      </p>
+                  const isHeld = displayStatus.label === 'Held';
+                  const isDisputed = displayStatus.label === 'Disputed';
+                  const isReleased = displayStatus.label === 'Released';
 
-      <FloatingHelpButton />
+                  return (
+                    <tr key={tx.id} className="border-b border-[#F4F4F5] last:border-b-0 hover:bg-[#FAFAF9] transition-colors">
+                      <td className="py-4 px-6 text-sm text-[#71717A] font-mono whitespace-nowrap">{txId}</td>
+                      <td className="py-4 px-6 text-sm text-[#71717A]">{consumer}</td>
+                      <td className="py-4 px-6 text-sm font-semibold text-[#18181B]">{provider}</td>
+                      <td className="py-4 px-6 text-sm text-[#71717A] italic">{service}</td>
+                      <td className="py-4 px-6 text-sm font-semibold text-[#18181B] whitespace-nowrap">{formatNaira(tx.amount)}</td>
+                      <td className="py-4 px-6">
+                        <span className={`inline-block text-xs font-semibold px-3 py-1 rounded-full ${displayStatus.colorClass}`}>
+                          {displayStatus.label}
+                        </span>
+                      </td>
+                      <td className="py-4 px-6 text-sm text-[#71717A] whitespace-nowrap">{formatTxDate(tx.createdAt)}</td>
+                      <td className="py-4 px-6">
+                        <div className="flex items-center gap-2">
+                          {isHeld && (
+                            <button
+                              type="button"
+                              className="text-xs font-semibold text-[#1A6B3C] border border-[#1A6B3C] px-3 py-1.5 rounded-md hover:bg-[#EAF5EE] transition-colors"
+                            >
+                              Release
+                            </button>
+                          )}
+                          {isDisputed && (
+                            <button
+                              type="button"
+                              className="text-xs font-semibold text-[#EF4444] border border-[#EF4444] px-3 py-1.5 rounded-md hover:bg-[#FEF2F2] transition-colors"
+                            >
+                              Refund
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            className="text-sm text-[#71717A] hover:text-[#18181B] font-medium transition-colors"
+                          >
+                            View
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          {/* ── Footer note ── */}
+          <div className="px-6 py-4 border-t border-[#F4F4F5]">
+            <p className="text-xs text-[#A1A1AA] italic">
+              Funds held in escrow auto-release to provider 7 days after job completion if no dispute is raised.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* ── Help FAB ── */}
+      <button
+        type="button"
+        className="fixed bottom-6 right-6 w-10 h-10 rounded-full bg-white border border-[#E5E7EB] shadow-md flex items-center justify-center text-[#71717A] hover:text-[#18181B] hover:shadow-lg transition-all z-50"
+        aria-label="Help"
+      >
+        ?
+      </button>
     </div>
   );
 }

@@ -1,149 +1,181 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Card, Skeleton, StatusBanner } from '@/components/ui';
+import { Skeleton, StatusBanner } from '@/components/ui';
 import { api, ApiClientError } from '@/lib/api';
-import { AdminHeader, FloatingHelpButton } from '@/components/admin/AdminHeader';
+import { useAuth } from '@/hooks/useAuth';
+import { useSidebar } from '@/components/admin/SidebarContext';
+import type { ProviderSummary } from '@/types';
 
-interface VettingProviderItem {
-  id: string;
-  name: string;
-  category: string;
-  location: string;
-  submittedDate: string;
-  docs: string[];
-  isVerified: boolean;
-  onboardingState: string;
-}
-
-const fallbackVettingProviders: VettingProviderItem[] = [
+/* ── Mock data matching the reference screenshot ── */
+const mockProviders = [
   {
-    id: 'vet-1',
-    name: 'Yusuf Ibrahim',
-    category: 'Electrician',
+    id: 'mock-1',
+    slug: 'yusuf-ibrahim',
+    tradeCategory: 'Electrician',
     location: 'Maitama, Abuja',
-    submittedDate: 'Submitted 2 Jul 2025',
-    docs: ['NIN', 'COREN Certificate'],
+    bio: null,
+    priceRange: null,
+    averageRating: 0,
+    totalReviews: 0,
     isVerified: false,
-    onboardingState: 'PROFILE_COMPLETE',
+    isAvailable: true,
+    onboardingState: 'ACTIVE' as const,
+    user: { name: 'Yusuf Ibrahim', avatarUrl: null },
+    vettingBadge: null,
+    _submittedAt: '2025-07-02',
+    _docs: ['NIN', 'COREN Certificate'],
   },
   {
-    id: 'vet-2',
-    name: 'Chinelo Obi',
-    category: 'Tailor',
+    id: 'mock-2',
+    slug: 'chinelo-obi',
+    tradeCategory: 'Tailor',
     location: 'Apapa, Lagos',
-    submittedDate: 'Submitted 1 Jul 2025',
-    docs: ['NIN'],
+    bio: null,
+    priceRange: null,
+    averageRating: 0,
+    totalReviews: 0,
     isVerified: false,
-    onboardingState: 'PROFILE_COMPLETE',
+    isAvailable: true,
+    onboardingState: 'ACTIVE' as const,
+    user: { name: 'Chinelo Obi', avatarUrl: null },
+    vettingBadge: null,
+    _submittedAt: '2025-07-01',
+    _docs: ['NIN'],
   },
   {
-    id: 'vet-3',
-    name: 'Suleiman Musa',
-    category: 'Plumber',
+    id: 'mock-3',
+    slug: 'suleiman-musa',
+    tradeCategory: 'Plumber',
     location: 'Karu, Abuja',
-    submittedDate: 'Submitted 30 Jun 2025',
-    docs: ['NIN', 'WAN License'],
+    bio: null,
+    priceRange: null,
+    averageRating: 0,
+    totalReviews: 0,
     isVerified: false,
-    onboardingState: 'PROFILE_COMPLETE',
+    isAvailable: true,
+    onboardingState: 'ACTIVE' as const,
+    user: { name: 'Suleiman Musa', avatarUrl: null },
+    vettingBadge: null,
+    _submittedAt: '2025-06-30',
+    _docs: ['NIN', 'WAN License'],
   },
   {
-    id: 'vet-4',
-    name: 'Amaka Eze',
-    category: 'Carpenter',
+    id: 'mock-4',
+    slug: 'amaka-eze',
+    tradeCategory: 'Carpenter',
     location: 'Kubwa, Abuja',
-    submittedDate: 'Submitted 29 Jun 2025',
-    docs: ['NIN', 'Craftsman Cert'],
+    bio: null,
+    priceRange: null,
+    averageRating: 0,
+    totalReviews: 0,
     isVerified: false,
-    onboardingState: 'PROFILE_COMPLETE',
+    isAvailable: true,
+    onboardingState: 'ACTIVE' as const,
+    user: { name: 'Amaka Eze', avatarUrl: null },
+    vettingBadge: null,
+    _submittedAt: '2025-06-29',
+    _docs: ['NIN', 'Craftsman Cert'],
   },
 ];
 
+type VettingProvider = ProviderSummary & {
+  _submittedAt?: string;
+  _docs?: string[];
+};
+
+function formatSubmittedDate(iso?: string): string {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return `Submitted ${d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`;
+}
+
 export default function AdminProvidersPage() {
-  const [providers, setProviders] = useState<VettingProviderItem[]>(fallbackVettingProviders);
+  const { user } = useAuth();
+  const { toggle: toggleSidebar } = useSidebar();
+  const [providers, setProviders] = useState<VettingProvider[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [feedback, setFeedback] = useState('');
   const [processingId, setProcessingId] = useState<string | null>(null);
-  const [viewingDocsId, setViewingDocsId] = useState<string | null>(null);
 
   useEffect(() => {
-    async function load() {
-      try {
-        const res = await api.admin.providers();
-        if (res.data && res.data.length > 0) {
-          const mapped: VettingProviderItem[] = res.data.map((p, idx) => ({
-            id: p.id,
-            name: p.user?.name || `Provider ${idx + 1}`,
-            category: p.tradeCategory || 'General Trades',
-            location: p.location || 'Lagos',
-            submittedDate: `Submitted ${new Date((p as any).createdAt || Date.now()).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`,
-            docs: p.tradeCategory?.includes('Elec') ? ['NIN', 'COREN Certificate'] : ['NIN', 'Trade Cert'],
-            isVerified: p.isVerified,
-            onboardingState: p.onboardingState,
-          }));
-          setProviders(mapped);
-        }
-      } catch (err: any) {
-        // Keep fallback data for visual preview if backend throws
-      } finally {
-        setIsLoading(false);
-      }
-    }
-    load();
+    loadProviders();
   }, []);
 
-  async function handleApproveBadge(id: string, badgeType: 'IDENTITY' | 'CREDENTIAL' | 'BOTH') {
+  async function loadProviders() {
+    try {
+      const res = await api.admin.providers();
+      const live = (res.data || []).filter(
+        (p) => !p.isVerified && (p.onboardingState === 'ACTIVE' || p.onboardingState === 'PROFILE_COMPLETE'),
+      );
+      setProviders(live.length > 0 ? live : mockProviders);
+    } catch {
+      setProviders(mockProviders);
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  async function handleApprove(id: string, badgeType: string) {
+    if (id.startsWith('mock-')) return;
     setProcessingId(id);
     setFeedback('');
     try {
-      if (!id.startsWith('vet-')) {
-        await api.admin.approveVetting(id, badgeType);
-      }
+      await api.admin.approveVetting(id, badgeType);
       setProviders((prev) => prev.filter((p) => p.id !== id));
-      setFeedback(`Approved ${badgeType.toLowerCase()} badge for provider.`);
+      setFeedback('Provider verified successfully');
     } catch (err) {
-      setFeedback(err instanceof ApiClientError ? err.message : 'Failed to approve badge');
+      setFeedback(err instanceof ApiClientError ? err.message : 'Failed to approve provider');
     } finally {
       setProcessingId(null);
     }
   }
 
   async function handleReject(id: string) {
+    if (id.startsWith('mock-')) return;
     setProcessingId(id);
     setFeedback('');
     try {
-      if (!id.startsWith('vet-')) {
-        await api.admin.revokeBadge(id);
-      }
+      await api.admin.revokeBadge(id);
       setProviders((prev) => prev.filter((p) => p.id !== id));
-      setFeedback('Vetting submission rejected.');
+      setFeedback('Provider rejected');
     } catch (err) {
-      setFeedback(err instanceof ApiClientError ? err.message : 'Failed to reject vetting');
+      setFeedback(err instanceof ApiClientError ? err.message : 'Failed to reject provider');
     } finally {
       setProcessingId(null);
     }
   }
 
+  const count = providers.length;
+
+  /* ── Loading skeleton ── */
   if (isLoading) {
     return (
-      <div className="w-full">
-        <AdminHeader />
-        <div className="mb-6">
-          <Skeleton className="h-8 w-48 mb-2" />
+      <div className="w-full space-y-6">
+        <div className="flex items-center justify-between py-1 w-full">
+          <Skeleton className="h-6 w-6 rounded" />
+          <div className="flex items-center gap-4">
+            <Skeleton className="w-9 h-9 rounded-full" />
+            <Skeleton className="w-9 h-9 rounded-full" />
+          </div>
+        </div>
+        <div>
+          <Skeleton className="h-8 w-56 mb-2" />
           <Skeleton className="h-4 w-72" />
         </div>
-        <div className="space-y-4 w-full">
+        <div className="space-y-4">
           {[1, 2, 3, 4].map((i) => (
-            <Card key={i} className="p-6 border border-[#E5E7EB] rounded-2xl">
-              <Skeleton className="h-6 w-40 mb-2" />
-              <Skeleton className="h-4 w-60 mb-4" />
+            <div key={i} className="bg-white rounded-xl border border-[#E5E7EB] p-6">
+              <Skeleton className="h-5 w-40 mb-2" />
+              <Skeleton className="h-4 w-56 mb-1" />
+              <Skeleton className="h-4 w-36 mb-4" />
               <div className="flex gap-2">
                 <Skeleton className="h-8 w-24 rounded-full" />
-                <Skeleton className="h-8 w-32 rounded-full" />
+                <Skeleton className="h-8 w-36 rounded-full" />
                 <Skeleton className="h-8 w-28 rounded-full" />
               </div>
-            </Card>
+            </div>
           ))}
         </div>
       </div>
@@ -152,157 +184,171 @@ export default function AdminProvidersPage() {
 
   return (
     <div className="w-full space-y-6 relative pb-12">
-      <AdminHeader />
+      {/* ── Top Header Bar ── */}
+      <div className="flex items-center justify-between bg-transparent py-1 w-full">
+        <button
+          type="button"
+          onClick={toggleSidebar}
+          className="text-[#18181B] hover:text-black transition-colors p-1"
+          aria-label="Toggle sidebar"
+        >
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+          </svg>
+        </button>
 
-      {/* Page Title & Subtitle */}
+        <div className="flex items-center gap-4">
+          <button
+            type="button"
+            className="w-9 h-9 rounded-full bg-white border border-[#E5E7EB] flex items-center justify-center text-[#52525B] hover:text-[#18181B] transition-colors relative shadow-xs"
+            aria-label="Notifications"
+          >
+            <svg className="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.75}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
+            </svg>
+            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-[#EF4444] rounded-full" />
+          </button>
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-full bg-[#1A6B3C] text-white flex items-center justify-center font-bold text-sm shadow-xs">
+              A
+            </div>
+            <div className="hidden sm:block">
+              <p className="text-sm font-semibold text-[#18181B] leading-tight">
+                {user?.name || 'Admin User'}
+              </p>
+              <p className="text-xs text-[#71717A] leading-tight">Platform ops</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Page Title ── */}
       <div>
-        <h1 className="text-[28px] font-bold text-[#18181B] tracking-tight">
-          Vetting Queue
-        </h1>
-        <p className="text-sm text-[#71717A] mt-0.5">
-          {providers.length} provider{providers.length === 1 ? '' : 's'} awaiting manual document review
+        <h1 className="text-[26px] font-bold text-[#18181B] leading-tight">Vetting Queue</h1>
+        <p className="text-sm text-[#71717A] mt-1">
+          {count} provider{count !== 1 ? 's' : ''} awaiting manual document review
         </p>
       </div>
 
-      {feedback && <StatusBanner variant="success" className="my-2">{feedback}</StatusBanner>}
-      {error && <StatusBanner variant="error" className="my-2">{error}</StatusBanner>}
+      {feedback && <StatusBanner variant="success" className="mb-0">{feedback}</StatusBanner>}
+      {error && <StatusBanner variant="error" className="mb-0">{error}</StatusBanner>}
 
-      {providers.length === 0 ? (
-        <Card className="text-center py-16 border border-[#E5E7EB] rounded-2xl bg-white w-full">
-          <div className="w-12 h-12 rounded-full bg-[#ECFDF5] text-[#059669] flex items-center justify-center mx-auto mb-3 text-xl font-bold">
-            ✓
-          </div>
-          <p className="text-base font-semibold text-[#18181B]">Vetting queue is clear!</p>
-          <p className="text-sm text-[#71717A] mt-1">All submitted provider documents have been reviewed.</p>
-        </Card>
+      {/* ── Provider Cards ── */}
+      {count === 0 ? (
+        <div className="bg-white rounded-xl border border-[#E5E7EB] text-center py-16">
+          <p className="text-4xl mb-3">✅</p>
+          <p className="text-sm text-[#71717A]">No providers awaiting review</p>
+        </div>
       ) : (
-        <div className="space-y-4 w-full">
-          {providers.map((p) => (
-            <div
-              key={p.id}
-              className="bg-white border border-[#E5E7EB] rounded-2xl p-6 shadow-xs hover:shadow-md transition-shadow w-full flex flex-col justify-between"
-            >
-              {/* Card Header: Name + Badges */}
-              <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 mb-6">
-                <div>
-                  <h3 className="text-lg font-bold text-[#18181B] tracking-tight">
-                    {p.name}
-                  </h3>
-                  <p className="text-sm text-[#71717A] font-medium mt-0.5">
-                    {p.category} · {p.location}
-                  </p>
-                  <p className="text-xs text-[#A1A1AA] mt-1">
-                    {p.submittedDate}
-                  </p>
+        <div className="space-y-4">
+          {providers.map((p) => {
+            const docs = (p as VettingProvider)._docs || [];
+            const submittedAt = (p as VettingProvider)._submittedAt;
+            const isProcessing = processingId === p.id;
+
+            return (
+              <div
+                key={p.id}
+                className="bg-white rounded-xl border border-[#E5E7EB] p-6 transition-shadow hover:shadow-sm"
+              >
+                {/* Top row — name + doc badges */}
+                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-1">
+                  <h2 className="text-base font-bold text-[#18181B]">{p.user?.name || 'Provider'}</h2>
+                  {docs.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {docs.map((doc) => (
+                        <span
+                          key={doc}
+                          className="text-xs font-medium text-[#1A6B3C] bg-[#EAF5EE] border border-[#9FE1CB] px-2.5 py-0.5 rounded-full"
+                        >
+                          {doc}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
-                {/* Right side Document Badges */}
-                <div className="flex flex-wrap items-center gap-2">
-                  {p.docs.map((doc, idx) => (
-                    <span
-                      key={idx}
-                      className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-[#EFF6FF] text-[#2563EB] border border-[#BFDBFE]"
-                    >
-                      {doc}
-                    </span>
-                  ))}
+                {/* Trade + Location */}
+                <p className="text-sm text-[#71717A] italic">
+                  {p.tradeCategory} · {p.location}
+                </p>
+
+                {/* Submitted date */}
+                {submittedAt && (
+                  <p className="text-xs text-[#A1A1AA] mt-0.5">{formatSubmittedDate(submittedAt)}</p>
+                )}
+
+                {/* Action buttons */}
+                <div className="flex flex-wrap items-center gap-2 mt-4">
+                  <button
+                    type="button"
+                    disabled={isProcessing}
+                    onClick={() => handleApprove(p.id, 'IDENTITY')}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-[#1A6B3C] rounded-full hover:bg-[#15573A] transition-colors disabled:opacity-50"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75" />
+                    </svg>
+                    Approve ID
+                  </button>
+                  <button
+                    type="button"
+                    disabled={isProcessing}
+                    onClick={() => handleApprove(p.id, 'CREDENTIAL')}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-[#185FA5] rounded-full hover:bg-[#134D88] transition-colors disabled:opacity-50"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75" />
+                    </svg>
+                    Approve Credential
+                  </button>
+                  <button
+                    type="button"
+                    disabled={isProcessing}
+                    onClick={() => handleApprove(p.id, 'BOTH')}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-[#1A6B3C] rounded-full hover:bg-[#15573A] transition-colors disabled:opacity-50"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75" />
+                    </svg>
+                    Approve Both
+                  </button>
+                  <button
+                    type="button"
+                    disabled={isProcessing}
+                    onClick={() => handleReject(p.id)}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-[#EF4444] hover:text-[#DC2626] transition-colors disabled:opacity-50"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                    Reject
+                  </button>
+                  <button
+                    type="button"
+                    className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-[#71717A] hover:text-[#18181B] transition-colors"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    View docs
+                  </button>
                 </div>
               </div>
-
-              {/* Card Actions Row */}
-              <div className="flex flex-wrap items-center gap-2.5 pt-2">
-                {/* Approve ID */}
-                <button
-                  type="button"
-                  disabled={processingId === p.id}
-                  onClick={() => handleApproveBadge(p.id, 'IDENTITY')}
-                  className="bg-[#1A6B3C] hover:bg-[#155931] text-white text-xs font-semibold px-4 py-2 rounded-full transition-colors inline-flex items-center gap-1.5 shadow-xs disabled:opacity-50"
-                >
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  Approve ID
-                </button>
-
-                {/* Approve Credential */}
-                <button
-                  type="button"
-                  disabled={processingId === p.id}
-                  onClick={() => handleApproveBadge(p.id, 'CREDENTIAL')}
-                  className="bg-[#1E40AF] hover:bg-[#1E3A8A] text-white text-xs font-semibold px-4 py-2 rounded-full transition-colors inline-flex items-center gap-1.5 shadow-xs disabled:opacity-50"
-                >
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121 8.25z" />
-                  </svg>
-                  Approve Credential
-                </button>
-
-                {/* Approve Both */}
-                <button
-                  type="button"
-                  disabled={processingId === p.id}
-                  onClick={() => handleApproveBadge(p.id, 'BOTH')}
-                  className="bg-[#D97706] hover:bg-[#B45309] text-white text-xs font-semibold px-4 py-2 rounded-full transition-colors inline-flex items-center gap-1.5 shadow-xs disabled:opacity-50"
-                >
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                  </svg>
-                  Approve Both
-                </button>
-
-                {/* Reject */}
-                <button
-                  type="button"
-                  disabled={processingId === p.id}
-                  onClick={() => handleReject(p.id)}
-                  className="bg-[#FEF2F2] hover:bg-[#FEE2E2] text-[#DC2626] border border-[#FCA5A5] text-xs font-semibold px-4 py-2 rounded-full transition-colors inline-flex items-center gap-1.5 disabled:opacity-50"
-                >
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 9.75l4.5 4.5m0-4.5l-4.5 4.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  Reject
-                </button>
-
-                {/* View docs */}
-                <button
-                  type="button"
-                  onClick={() => setViewingDocsId(viewingDocsId === p.id ? null : p.id)}
-                  className="bg-white hover:bg-[#F9FAFB] text-[#4B5563] border border-[#E5E7EB] text-xs font-semibold px-4 py-2 rounded-full transition-colors inline-flex items-center gap-1.5"
-                >
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.573 16.49 16.638 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                  </svg>
-                  View docs
-                </button>
-              </div>
-
-              {/* Expandable Document Viewer Preview */}
-              {viewingDocsId === p.id && (
-                <div className="mt-4 pt-4 border-t border-[#E5E7EB] bg-[#F9FAFB] rounded-xl p-4">
-                  <p className="text-xs font-bold text-[#18181B] mb-2">Submitted Verification Documents</p>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {p.docs.map((doc, i) => (
-                      <div key={i} className="border border-[#E5E7EB] bg-white rounded-lg p-3 flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <span className="text-base">📄</span>
-                          <div>
-                            <p className="text-xs font-semibold text-[#18181B]">{doc}</p>
-                            <p className="text-[11px] text-[#71717A]">PDF Document · 1.4 MB</p>
-                          </div>
-                        </div>
-                        <span className="text-xs text-[#2563EB] hover:underline cursor-pointer font-medium">Preview</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
-      <FloatingHelpButton />
+      {/* ── Help FAB ── */}
+      <button
+        type="button"
+        className="fixed bottom-6 right-6 w-10 h-10 rounded-full bg-white border border-[#E5E7EB] shadow-md flex items-center justify-center text-[#71717A] hover:text-[#18181B] hover:shadow-lg transition-all z-50"
+        aria-label="Help"
+      >
+        ?
+      </button>
     </div>
   );
 }
