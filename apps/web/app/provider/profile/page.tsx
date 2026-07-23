@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { Button, Input, StatusBanner, Skeleton } from '@/components/ui';
 import { api, ApiClientError } from '@/lib/api';
@@ -14,6 +15,7 @@ const MAX_PORTFOLIO_SIZE = 2 * 1024 * 1024;
 const MAX_PORTFOLIO_COUNT = 6;
 
 export default function ProviderProfilePage() {
+  const router = useRouter();
   const [provider, setProvider] = useState<MyProviderProfile | null>(null);
   const [bio, setBio] = useState('');
   const [tradeCategory, setTradeCategory] = useState('');
@@ -92,6 +94,7 @@ export default function ProviderProfilePage() {
         });
         setProviderId(res.data?.id || '');
         setSuccess('Profile created successfully');
+        setTimeout(() => router.push('/provider/dashboard'), 2000);
       }
     } catch (err) {
       if (err instanceof ApiClientError) {
