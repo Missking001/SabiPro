@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { useSidebar } from './SidebarContext';
@@ -69,15 +70,31 @@ export function AdminSidebar() {
       }`}
     >
       {/* Brand Header */}
-      <div className="p-6 flex items-center gap-3">
-        <Link href="/admin/dashboard" className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-[#1A6B3C] flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
-            S
-          </div>
-          {!collapsed && (
-            <span className="text-base font-semibold text-white tracking-tight">
-              SabiPro Admin
-            </span>
+      <div className="p-6 flex items-center">
+        <Link href="/admin/dashboard" className="flex items-center gap-2 overflow-hidden">
+          {collapsed ? (
+            <Image
+              src="/sabipro_logo_v4.png"
+              alt="SabiPro"
+              width={32}
+              height={32}
+              className="h-8 w-auto object-contain flex-shrink-0"
+              priority
+            />
+          ) : (
+            <div className="flex items-center gap-2">
+              <Image
+                src="/sabipro_logo_v4.png"
+                alt="SabiPro"
+                width={130}
+                height={36}
+                className="h-9 w-auto object-contain flex-shrink-0 brightness-110"
+                priority
+              />
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-[#1A6B3C] text-white uppercase tracking-wider">
+                Admin
+              </span>
+            </div>
           )}
         </Link>
       </div>
