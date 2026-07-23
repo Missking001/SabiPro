@@ -547,12 +547,26 @@ export default function ProviderProfilePage() {
             <p className="text-caption text-amber-900/80 leading-relaxed">
               {provider?.isVerified
                 ? 'You currently hold an ID + Credential badge, issued by the SabiPro ops team.'
-                : 'Your profile is active. Submit credentials to the admin team to get the Verified badge.'}
+                : provider?.onboardingState === 'PROFILE_COMPLETE'
+                ? 'Your profile is pending admin review. You will be notified once verified.'
+                : 'Complete your profile to start the verification process.'}
             </p>
             <div className="pt-1">
-              <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full bg-amber-100 text-amber-900 border border-amber-300">
-                <span className="w-1.5 h-1.5 rounded-full bg-amber-600" />
-                {provider?.isVerified ? 'ID + Credential' : 'Registered Provider'}
+              <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full border ${
+                provider?.isVerified
+                  ? 'bg-amber-100 text-amber-900 border-amber-300'
+                  : provider?.onboardingState === 'PROFILE_COMPLETE'
+                  ? 'bg-blue-50 text-blue-700 border-blue-200'
+                  : 'bg-neutral-100 text-neutral-600 border-neutral-200'
+              }`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${
+                  provider?.isVerified
+                    ? 'bg-amber-600'
+                    : provider?.onboardingState === 'PROFILE_COMPLETE'
+                    ? 'bg-blue-500'
+                    : 'bg-neutral-400'
+                }`} />
+                {provider?.isVerified ? 'ID + Credential' : provider?.onboardingState === 'PROFILE_COMPLETE' ? 'Pending approval' : 'Registered Provider'}
               </span>
             </div>
           </div>
