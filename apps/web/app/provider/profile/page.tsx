@@ -33,13 +33,15 @@ export default function ProviderProfilePage() {
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [uploadingPortfolio, setUploadingPortfolio] = useState(false);
   const [uploadingDocument, setUploadingDocument] = useState<string | null>(null);
-  const [pendingDocType, setPendingDocType] = useState<string | null>(null);
+  const [idUploaded, setIdUploaded] = useState(false);
+  const [credentialUploaded, setCredentialUploaded] = useState(false);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [providerId, setProviderId] = useState('');
 
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const portfolioInputRef = useRef<HTMLInputElement>(null);
-  const documentInputRef = useRef<HTMLInputElement>(null);
+  const idInputRef = useRef<HTMLInputElement>(null);
+  const credentialInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     async function loadProfile() {
@@ -197,16 +199,8 @@ export default function ProviderProfilePage() {
     }
   }
 
-  function startDocUpload(docType: string) {
-    setPendingDocType(docType);
-    documentInputRef.current?.click();
-  }
-
-  async function handleDocumentChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    const docType = pendingDocType;
-    setPendingDocType(null);
-    if (!file || !docType) return;
+  async function handleDocUpload(file: File | undefined, docType: string, setUploaded: (v: boolean) => void, inputRef: React.RefObject<HTMLInputElement | null>) {
+    if (!file) return;
 
     const validationError = validateFile(file, 5 * 1024 * 1024, 'Document');
     if (validationError) {
@@ -222,16 +216,8 @@ export default function ProviderProfilePage() {
       const res = await api.uploads.document(file);
       const url = res.data && res.data.url;
       if (url) {
-        setDocumentUrls((prev) => {
-          const next = [...prev];
-          const existingIndex = next.findIndex((u) => u.includes(docType));
-          if (existingIndex >= 0) {
-            next[existingIndex] = url;
-          } else {
-            next.push(url);
-          }
-          return next;
-        });
+        setDocumentUrls((prev) => [...prev, url]);
+        setUploaded(true);
       }
       setSuccess(`${docType} uploaded`);
     } catch (err) {
@@ -242,7 +228,7 @@ export default function ProviderProfilePage() {
       }
     } finally {
       setUploadingDocument(null);
-      if (documentInputRef.current) documentInputRef.current.value = '';
+      if (inputRef.current) inputRef.current.value = '';
     }
   }
 
@@ -466,7 +452,7 @@ export default function ProviderProfilePage() {
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-small font-semibold text-neutral-900">Verification documents</h2>
               <span className="text-caption text-neutral-400 font-medium">
-                {documentUrls.length}/2 uploaded
+                {(idUploaded ? 1 : 0) + (credentialUploaded ? 1 : 0)}/2 uploaded
               </span>
             </div>
             <p className="text-caption text-neutral-500 mb-3">
@@ -484,16 +470,21 @@ export default function ProviderProfilePage() {
                   <div>
                     <p className="text-sm font-medium text-neutral-900">Government-issued ID</p>
                     <p className="text-xs text-neutral-400">
-                      {documentUrls.some((u) => u.includes('id') || u.includes('ID'))
-                        ? 'Uploaded'
-                        : 'Not yet uploaded'}
+                      {idUploaded ? 'Uploaded' : 'Not yet uploaded'}
                     </p>
                   </div>
                 </div>
+                <input
+                  ref={idInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,application/pdf"
+                  className="hidden"
+                  onChange={(e) => handleDocUpload(e.target.files?.[0], 'ID', setIdUploaded, idInputRef)}
+                />
                 <button
                   type="button"
                   disabled={uploadingDocument === 'ID'}
-                  onClick={() => startDocUpload('ID')}
+                  onClick={() => idInputRef.current?.click()}
                   className="text-xs font-semibold text-primary-base hover:text-primary-hover disabled:opacity-50"
                 >
                   {uploadingDocument === 'ID' ? 'Uploading...' : 'Upload'}
@@ -511,29 +502,27 @@ export default function ProviderProfilePage() {
                   <div>
                     <p className="text-sm font-medium text-neutral-900">Trade certificate / Credential</p>
                     <p className="text-xs text-neutral-400">
-                      {documentUrls.some((u) => u.includes('credential') || u.includes('Credential'))
-                        ? 'Uploaded'
-                        : 'Not yet uploaded'}
+                      {credentialUploaded ? 'Uploaded' : 'Not yet uploaded'}
                     </p>
                   </div>
                 </div>
+                <input
+                  ref={credentialInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,application/pdf"
+                  className="hidden"
+                  onChange={(e) => handleDocUpload(e.target.files?.[0], 'Credential', setCredentialUploaded, credentialInputRef)}
+                />
                 <button
                   type="button"
                   disabled={uploadingDocument === 'Credential'}
-                  onClick={() => startDocUpload('Credential')}
+                  onClick={() => credentialInputRef.current?.click()}
                   className="text-xs font-semibold text-primary-base hover:text-primary-hover disabled:opacity-50"
                 >
                   {uploadingDocument === 'Credential' ? 'Uploading...' : 'Upload'}
                 </button>
               </div>
             </div>
-            <input
-              ref={documentInputRef}
-              type="file"
-              accept="image/jpeg,image/png,image/webp,application/pdf"
-              className="hidden"
-              onChange={handleDocumentChange}
-            />
           </div>
 
           {/* Vetting Status Card */}
