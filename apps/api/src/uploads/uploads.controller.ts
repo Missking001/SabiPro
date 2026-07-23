@@ -24,6 +24,7 @@ interface UploadFile {
 }
 
 const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+const ALLOWED_DOC_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
 const MAX_AVATAR_SIZE = 1 * 1024 * 1024; // 1MB
 const MAX_PORTFOLIO_SIZE = 2 * 1024 * 1024; // 2MB
 const MAX_PORTFOLIO_COUNT = 6;
@@ -38,13 +39,13 @@ export class UploadsController {
     private readonly prisma: PrismaService,
   ) {}
 
-  private validateFile(file: UploadFile | undefined, maxSize: number, label: string) {
+  private validateFile(file: UploadFile | undefined, maxSize: number, label: string, allowedTypes: string[] = ALLOWED_MIME_TYPES) {
     if (!file) {
       throw new BadRequestException('No file provided');
     }
-    if (!ALLOWED_MIME_TYPES.includes(file.mimetype)) {
+    if (!allowedTypes.includes(file.mimetype)) {
       throw new BadRequestException(
-        `${label} must be JPG, PNG, or WebP. Received: ${file.mimetype}`,
+        `${label} must be JPG, PNG, or WebP${allowedTypes.includes('application/pdf') ? ', or PDF' : ''}. Received: ${file.mimetype}`,
       );
     }
     if (file.size > maxSize) {
@@ -92,6 +93,30 @@ export class UploadsController {
       this.logger.error(`Avatar upload failed: ${err.message}`);
       throw new InternalServerErrorException(
         err.message || 'Failed to upload avatar. Please try again.',
+      );
+    }
+  }
+
+  @Post('document')
+  @UseInterceptors(FileInterceptor('file'))
+  async uploadDocument(
+    @UploadedFile() file: UploadFile,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    this.validateFile(file, 5 * 1024 * 1024, 'Document', ALLOWED_DOC_MIME_TYPES);
+
+    try {
+      const ext = file.mimetype === 'application/pdf' ? 'pdf' : this.getExtension(file.mimetype);
+      const path = this.generateFilePath(user.userId, 'documents', ext);
+
+      const url = await this.supabase.upload('sabipro', path, file.buffer, file.mimetype);
+
+      this.logger.log(`Document uploaded for user ${user.userId}`);
+      return { url };
+    } catch (err: any) {
+      this.logger.error(`Document upload failed: ${err.message}`);
+      throw new InternalServerErrorException(
+        err.message || 'Failed to upload document. Please try again.',
       );
     }
   }

@@ -48,6 +48,7 @@ model Provider {
   tradeCategory   String
   location        String
   portfolioUrls   String[]
+  documentUrls    String[]
   priceRangeMin   Int?
   priceRangeMax   Int?
   isAvailable     Boolean         @default(true)

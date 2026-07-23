@@ -54,6 +54,7 @@ export interface ProviderSummary {
   onboardingState: OnboardingState;
   user: { name: string; avatarUrl?: string | null };
   vettingBadge?: VettingBadge | null;
+  documentUrls?: string[];
 }
 
 export interface ReviewSummary {
@@ -66,6 +67,7 @@ export interface ReviewSummary {
 
 export interface ProviderProfile extends ProviderSummary {
   portfolioUrls: string[];
+  documentUrls: string[];
   createdAt: string;
   reviews: ReviewSummary[];
 }

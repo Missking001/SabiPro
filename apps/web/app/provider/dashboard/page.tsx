@@ -152,7 +152,7 @@ export default function ProviderDashboardPage() {
             <div className="flex flex-wrap items-center gap-2 mt-2">
               <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-0.5 rounded-full bg-secondary-tint text-secondary-deep border border-secondary-base/30">
                 <span className="w-1.5 h-1.5 rounded-full bg-secondary-base"></span>
-                {provider.isVerified ? 'ID + Credential' : 'Registered Provider'}
+                {provider.isVerified ? 'ID + Credential' : provider.onboardingState === 'PROFILE_COMPLETE' ? 'Pending approval' : 'Registered Provider'}
               </span>
               <span className="text-xs text-neutral-400 font-medium">
                 {provider.tradeCategory} • {provider.location}

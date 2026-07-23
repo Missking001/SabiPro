@@ -204,6 +204,31 @@ export class AdminService {
     });
   }
 
+  async getProviders() {
+    return this.prisma.provider.findMany({
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        slug: true,
+        tradeCategory: true,
+        location: true,
+        bio: true,
+        portfolioUrls: true,
+        documentUrls: true,
+        priceRangeMin: true,
+        priceRangeMax: true,
+        averageRating: true,
+        totalReviews: true,
+        isAvailable: true,
+        isVerified: true,
+        onboardingState: true,
+        createdAt: true,
+        user: { select: { name: true, avatarUrl: true } },
+        vettingBadge: { select: { badgeType: true, isActive: true } },
+      },
+    });
+  }
+
   async getDashboard() {
     const [totalUsers, activeProviders, totalInquiries, totalTransactions, platformRevenue, pendingVetting, pendingFlags] =
       await Promise.all([

@@ -24,6 +24,7 @@ export default function ProviderProfilePage() {
   const [priceRangeMax, setPriceRangeMax] = useState('');
   const [isAvailable, setIsAvailable] = useState(true);
   const [portfolioUrls, setPortfolioUrls] = useState<string[]>([]);
+  const [documentUrls, setDocumentUrls] = useState<string[]>([]);
 
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -31,11 +32,14 @@ export default function ProviderProfilePage() {
   const [isFetching, setIsFetching] = useState(true);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [uploadingPortfolio, setUploadingPortfolio] = useState(false);
+  const [uploadingDocument, setUploadingDocument] = useState<string | null>(null);
+  const [pendingDocType, setPendingDocType] = useState<string | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [providerId, setProviderId] = useState('');
 
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const portfolioInputRef = useRef<HTMLInputElement>(null);
+  const documentInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     async function loadProfile() {
@@ -50,6 +54,7 @@ export default function ProviderProfilePage() {
           setLocation(profile.location || '');
           setIsAvailable(profile.isAvailable ?? true);
           setPortfolioUrls(profile.portfolioUrls || []);
+          setDocumentUrls(profile.documentUrls || []);
           if (profile.priceRangeMin != null) setPriceRangeMin(String(profile.priceRangeMin / 100));
           if (profile.priceRangeMax != null) setPriceRangeMax(String(profile.priceRangeMax / 100));
         }
@@ -80,6 +85,7 @@ export default function ProviderProfilePage() {
           priceRangeMax: maxKobo,
           isAvailable,
           portfolioUrls,
+          documentUrls,
         });
         if (updatedRes.data) setProvider(updatedRes.data);
         setSuccess('Profile updated successfully');
@@ -91,6 +97,7 @@ export default function ProviderProfilePage() {
           priceRangeMin: minKobo,
           priceRangeMax: maxKobo,
           portfolioUrls,
+          documentUrls,
         });
         setProviderId(res.data?.id || '');
         setSuccess('Profile created successfully');
@@ -187,6 +194,55 @@ export default function ProviderProfilePage() {
     } finally {
       setUploadingPortfolio(false);
       if (portfolioInputRef.current) portfolioInputRef.current.value = '';
+    }
+  }
+
+  function startDocUpload(docType: string) {
+    setPendingDocType(docType);
+    documentInputRef.current?.click();
+  }
+
+  async function handleDocumentChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    const docType = pendingDocType;
+    setPendingDocType(null);
+    if (!file || !docType) return;
+
+    const validationError = validateFile(file, 5 * 1024 * 1024, 'Document');
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+
+    setUploadingDocument(docType);
+    setError('');
+    setSuccess('');
+
+    try {
+      const res = await api.uploads.document(file);
+      const url = res.data && res.data.url;
+      if (url) {
+        setDocumentUrls((prev) => {
+          const next = [...prev];
+          const existingIndex = next.findIndex((u) => u.includes(docType));
+          if (existingIndex >= 0) {
+            next[existingIndex] = url;
+          } else {
+            next.push(url);
+          }
+          return next;
+        });
+      }
+      setSuccess(`${docType} uploaded`);
+    } catch (err) {
+      if (err instanceof ApiClientError) {
+        setError(err.message);
+      } else {
+        setError('Failed to upload document');
+      }
+    } finally {
+      setUploadingDocument(null);
+      if (documentInputRef.current) documentInputRef.current.value = '';
     }
   }
 
@@ -403,6 +459,81 @@ export default function ProviderProfilePage() {
                 </button>
               )}
             </div>
+          </div>
+
+          {/* Identity Document Upload Card */}
+          <div className="bg-white rounded-card border border-surface-border p-4 shadow-xs">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-small font-semibold text-neutral-900">Verification documents</h2>
+              <span className="text-caption text-neutral-400 font-medium">
+                {documentUrls.length}/2 uploaded
+              </span>
+            </div>
+            <p className="text-caption text-neutral-500 mb-3">
+              Upload your ID and trade certificates for admin verification. Approved formats: JPG, PNG, WebP, PDF (max 5MB each).
+            </p>
+            <div className="space-y-3">
+              {/* ID Upload */}
+              <div className="flex items-center justify-between p-3 bg-[#FAFAF9] rounded-xl border border-surface-border">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-[#E6F1FB] flex items-center justify-center text-[#185FA5]">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 9h3.75M15 12h3.75M15 15h3.75M4.5 19.5h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5zm6-10.125a1.875 1.875 0 11-3.75 0 1.875 1.875 0 013.75 0zm1.294 6.336a6.721 6.721 0 01-3.17.789 6.721 6.721 0 01-3.168-.789 3.376 3.376 0 016.338 0z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-neutral-900">Government-issued ID</p>
+                    <p className="text-xs text-neutral-400">
+                      {documentUrls.some((u) => u.includes('id') || u.includes('ID'))
+                        ? 'Uploaded'
+                        : 'Not yet uploaded'}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  disabled={uploadingDocument === 'ID'}
+                  onClick={() => startDocUpload('ID')}
+                  className="text-xs font-semibold text-primary-base hover:text-primary-hover disabled:opacity-50"
+                >
+                  {uploadingDocument === 'ID' ? 'Uploading...' : 'Upload'}
+                </button>
+              </div>
+
+              {/* Credential Upload */}
+              <div className="flex items-center justify-between p-3 bg-[#FAFAF9] rounded-xl border border-surface-border">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-[#EAF5EE] flex items-center justify-center text-[#1A6B3C]">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M4.26 10.147a60.438 60.438 0 0 0-.491 6.347A48.62 48.62 0 0 1 12 20.904a48.62 48.62 0 0 1 8.232-4.41 60.46 60.46 0 0 0-.491-6.347m-15.482 0a50.636 50.636 0 0 0-2.658-.813A59.906 59.906 0 0 1 12 3.493a59.903 59.903 0 0 1 10.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.717 50.717 0 0 1 12 13.489a50.702 50.702 0 0 1 7.74-3.342" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-neutral-900">Trade certificate / Credential</p>
+                    <p className="text-xs text-neutral-400">
+                      {documentUrls.some((u) => u.includes('credential') || u.includes('Credential'))
+                        ? 'Uploaded'
+                        : 'Not yet uploaded'}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  disabled={uploadingDocument === 'Credential'}
+                  onClick={() => startDocUpload('Credential')}
+                  className="text-xs font-semibold text-primary-base hover:text-primary-hover disabled:opacity-50"
+                >
+                  {uploadingDocument === 'Credential' ? 'Uploading...' : 'Upload'}
+                </button>
+              </div>
+            </div>
+            <input
+              ref={documentInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp,application/pdf"
+              className="hidden"
+              onChange={handleDocumentChange}
+            />
           </div>
 
           {/* Vetting Status Card */}

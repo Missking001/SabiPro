@@ -123,7 +123,7 @@ export const api = {
     },
     findBySlug: (slug: string) => request<ProviderProfile>(`/api/providers/${slug}`),
     me: () => request<MyProviderProfile | null>('/api/providers/me'),
-    create: (data: { bio?: string; tradeCategory: string; location: string; priceRangeMin?: number; priceRangeMax?: number; portfolioUrls?: string[] }) =>
+    create: (data: { bio?: string; tradeCategory: string; location: string; priceRangeMin?: number; priceRangeMax?: number; portfolioUrls?: string[]; documentUrls?: string[] }) =>
       request<{ id: string; slug: string }>('/api/providers', {
         method: 'POST',
         body: JSON.stringify(data),
@@ -136,6 +136,7 @@ export const api = {
       priceRangeMax?: number;
       isAvailable?: boolean;
       portfolioUrls?: string[];
+      documentUrls?: string[];
     }) =>
       request<MyProviderProfile>(`/api/providers/${id}`, {
         method: 'PATCH',
@@ -199,10 +200,7 @@ export const api = {
         method: 'PATCH',
         body: JSON.stringify({ action }),
       }),
-    providers: (params?: { page?: number }) => {
-      const qs = params?.page ? `?page=${params.page}` : '';
-      return request<ProviderSummary[]>(`/api/providers${qs}`);
-    },
+    providers: () => request<ProviderSummary[]>('/api/admin/providers'),
     users: () => request<{ id: string; name: string; email: string; role: string; isActive: boolean; createdAt: string }[]>('/api/admin/users'),
     suspendUser: (id: string) =>
       request<{ message: string }>(`/api/admin/users/${id}/suspend`, { method: 'PATCH' }),
@@ -242,6 +240,15 @@ export const api = {
   },
 
   uploads: {
+    document: (file: File) => {
+      const formData = new FormData();
+      formData.append('file', file);
+      return request<{ url: string }>('/api/uploads/document', {
+        method: 'POST',
+        body: formData,
+        headers: {},
+      });
+    },
     avatar: (file: File) => {
       const formData = new FormData();
       formData.append('file', file);

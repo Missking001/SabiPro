@@ -61,6 +61,7 @@ export class ProvidersService {
           isVerified: true,
           isAvailable: true,
           onboardingState: true,
+          documentUrls: true,
           user: { select: { name: true, avatarUrl: true } },
           vettingBadge: { select: { badgeType: true, isActive: true } },
         },
@@ -91,6 +92,7 @@ export class ProvidersService {
         isAvailable: true,
         isVerified: true,
         onboardingState: true,
+        documentUrls: true,
         createdAt: true,
         user: { select: { name: true, avatarUrl: true } },
         vettingBadge: { select: { badgeType: true, isActive: true } },
@@ -138,6 +140,7 @@ export class ProvidersService {
         priceRangeMin: dto.priceRangeMin,
         priceRangeMax: dto.priceRangeMax,
         portfolioUrls: dto.portfolioUrls ?? [],
+        documentUrls: dto.documentUrls ?? [],
         onboardingState: OnboardingState.PROFILE_COMPLETE,
       },
       select: {
@@ -174,6 +177,7 @@ export class ProvidersService {
     if (dto.priceRangeMax !== undefined) data.priceRangeMax = dto.priceRangeMax;
     if (dto.isAvailable !== undefined) data.isAvailable = dto.isAvailable;
     if (dto.portfolioUrls !== undefined) data.portfolioUrls = dto.portfolioUrls;
+    if (dto.documentUrls !== undefined) data.documentUrls = dto.documentUrls;
 
     if (!provider.bio && dto.bio) {
       data.onboardingState = OnboardingState.PROFILE_COMPLETE;
@@ -206,6 +210,7 @@ export class ProvidersService {
         location: true,
         bio: true,
         portfolioUrls: true,
+        documentUrls: true,
         priceRangeMin: true,
         priceRangeMax: true,
         averageRating: true,

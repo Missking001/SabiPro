@@ -27,6 +27,10 @@ export class CreateProviderDto {
   @IsArray()
   @IsOptional()
   portfolioUrls?: string[];
+
+  @IsArray()
+  @IsOptional()
+  documentUrls?: string[];
 }
 
 export class UpdateProviderDto {
@@ -61,6 +65,10 @@ export class UpdateProviderDto {
   @IsArray()
   @IsOptional()
   portfolioUrls?: string[];
+
+  @IsArray()
+  @IsOptional()
+  documentUrls?: string[];
 }
 
 export class SearchProvidersDto {

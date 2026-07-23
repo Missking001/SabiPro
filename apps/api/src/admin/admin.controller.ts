@@ -64,6 +64,11 @@ export class AdminController {
     return this.adminService.getTransactions();
   }
 
+  @Get('providers')
+  async getProviders() {
+    return this.adminService.getProviders();
+  }
+
   @Get('dashboard')
   async getDashboard() {
     return this.adminService.getDashboard();

@@ -228,8 +228,8 @@ export default function AdminProvidersPage() {
             trade: reviewProvider.tradeCategory,
             location: reviewProvider.location,
             submittedAt: undefined,
-            docs: [],
-            docUrls: [],
+            docs: ['Government-issued ID', 'Trade certificate / Credential'],
+            docUrls: reviewProvider.documentUrls || [],
           }}
           onClose={() => setReviewProvider(null)}
           onApprove={handleApprove}
