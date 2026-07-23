@@ -40,9 +40,9 @@ function StatCard({
 }) {
   const isPositive = increase && increase.startsWith('+');
   return (
-    <Card className="p-5">
-      <div className="flex items-start justify-between mb-3">
-        <div className="w-10 h-10 rounded-lg bg-primary-tint flex items-center justify-center text-primary-base">
+    <Card className="p-4">
+      <div className="flex items-start justify-between mb-2">
+        <div className="w-9 h-9 rounded-lg bg-primary-tint flex items-center justify-center text-primary-base">
           {icon}
         </div>
         {increase && (
@@ -62,7 +62,7 @@ function StatCard({
           </span>
         )}
       </div>
-      <p className="text-display font-medium text-neutral-900 mb-0.5">{value}</p>
+      <p className="text-subhead font-medium text-neutral-900 mb-0.5">{value}</p>
       <p className="text-caption text-neutral-500">{label}</p>
     </Card>
   );
@@ -79,8 +79,8 @@ function BarChart({
 }) {
   const max = Math.max(...data.map((d) => d.value), 1);
   return (
-    <Card className="p-5">
-      <p className="text-small font-medium text-neutral-900 mb-4">{title}</p>
+    <Card className="p-4">
+      <p className="text-small font-medium text-neutral-900 mb-3">{title}</p>
       <div className="flex items-end gap-2 h-32">
         {data.map((d) => (
           <div key={d.label} className="flex-1 flex flex-col items-center gap-1">
@@ -182,7 +182,7 @@ export default function AdminDashboardPage() {
   }
 
   return (
-    <div>
+    <div className="max-w-6xl mx-auto">
       {/* Top header */}
       <div className="flex items-center justify-between mb-8">
         <button
@@ -294,60 +294,60 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* Row 3: 2 graphs */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
         <BarChart title="Monthly Revenue Analytics" data={revenueData} color="#1A6B3C" />
         <BarChart title="New Sign Up Analytics" data={signupData} color="#185FA5" />
       </div>
 
       {/* Row 4: 2 bottom action cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Vetting queue */}
-        <Card className="p-5 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-lg bg-primary-tint flex items-center justify-center text-primary-base">
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+        <Card className="p-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-primary-tint flex items-center justify-center text-primary-base">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 01-1.043 3.296 3.745 3.745 0 01-3.296 1.043A3.745 3.745 0 0112 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 01-3.296-1.043 3.745 3.745 0 01-1.043-3.296A3.745 3.745 0 013 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 011.043-3.296 3.746 3.746 0 013.296-1.043A3.746 3.746 0 0112 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 013.296 1.043 3.746 3.746 0 011.043 3.296A3.745 3.745 0 0121 12z" />
               </svg>
             </div>
             <div>
-              <p className="text-small text-neutral-500">Vetting queue</p>
-              <p className="text-body font-medium text-neutral-900">
+              <p className="text-caption text-neutral-500">Vetting queue</p>
+              <p className="text-small font-medium text-neutral-900">
                 {stats?.pendingVetting ?? 0} awaiting document review
               </p>
             </div>
           </div>
           <Link
             href="/admin/providers"
-            className="flex items-center gap-1 text-small font-medium text-primary-base hover:text-primary-hover transition-colors"
+            className="flex items-center gap-1 text-caption font-medium text-primary-base hover:text-primary-hover transition-colors flex-shrink-0"
           >
             Review now
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
             </svg>
           </Link>
         </Card>
 
         {/* Flagged content */}
-        <Card className="p-5 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-lg bg-primary-tint flex items-center justify-center text-primary-base">
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+        <Card className="p-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-primary-tint flex items-center justify-center text-primary-base">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M3 3v1.5M3 21v-6m0 0l2.77-.693a9 9 0 016.208.682l.108.054a9 9 0 006.086.71l3.114-.732a48.524 48.524 0 01-.005-10.499l-3.11.732a9 9 0 01-6.085-.711l-.108-.054a9 9 0 00-6.208-.682L3 4.5M3 15V4.5" />
               </svg>
             </div>
             <div>
-              <p className="text-small text-neutral-500">Flagged content</p>
-              <p className="text-body font-medium text-neutral-900">
+              <p className="text-caption text-neutral-500">Flagged content</p>
+              <p className="text-small font-medium text-neutral-900">
                 {stats?.pendingFlags ?? 0} items pending moderation
               </p>
             </div>
           </div>
           <Link
             href="/admin/flags"
-            className="flex items-center gap-1 text-small font-medium text-primary-base hover:text-primary-hover transition-colors"
+            className="flex items-center gap-1 text-caption font-medium text-primary-base hover:text-primary-hover transition-colors flex-shrink-0"
           >
             Moderate
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
             </svg>
           </Link>
