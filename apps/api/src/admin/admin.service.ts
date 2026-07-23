@@ -191,6 +191,16 @@ export class AdminService {
   async getTransactions() {
     return this.prisma.transaction.findMany({
       orderBy: { createdAt: 'desc' },
+      include: {
+        consumer: { select: { name: true } },
+        provider: {
+          select: {
+            tradeCategory: true,
+            slug: true,
+            user: { select: { name: true } },
+          },
+        },
+      },
     });
   }
 

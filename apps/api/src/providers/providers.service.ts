@@ -54,7 +54,8 @@ export class ProvidersService {
           tradeCategory: true,
           location: true,
           bio: true,
-          priceRange: true,
+          priceRangeMin: true,
+          priceRangeMax: true,
           averageRating: true,
           totalReviews: true,
           isVerified: true,
@@ -83,7 +84,8 @@ export class ProvidersService {
         location: true,
         bio: true,
         portfolioUrls: true,
-        priceRange: true,
+        priceRangeMin: true,
+        priceRangeMax: true,
         averageRating: true,
         totalReviews: true,
         isAvailable: true,
@@ -133,7 +135,8 @@ export class ProvidersService {
         bio: dto.bio,
         tradeCategory: dto.tradeCategory.trim(),
         location: dto.location.trim(),
-        priceRange: dto.priceRange,
+        priceRangeMin: dto.priceRangeMin,
+        priceRangeMax: dto.priceRangeMax,
         onboardingState: OnboardingState.PROFILE_COMPLETE,
       },
       select: {
@@ -166,7 +169,8 @@ export class ProvidersService {
     if (dto.bio !== undefined) data.bio = dto.bio;
     if (dto.tradeCategory !== undefined) data.tradeCategory = dto.tradeCategory.trim();
     if (dto.location !== undefined) data.location = dto.location.trim();
-    if (dto.priceRange !== undefined) data.priceRange = dto.priceRange;
+    if (dto.priceRangeMin !== undefined) data.priceRangeMin = dto.priceRangeMin;
+    if (dto.priceRangeMax !== undefined) data.priceRangeMax = dto.priceRangeMax;
     if (dto.isAvailable !== undefined) data.isAvailable = dto.isAvailable;
     if (dto.portfolioUrls !== undefined) data.portfolioUrls = dto.portfolioUrls;
 
@@ -183,7 +187,8 @@ export class ProvidersService {
         tradeCategory: true,
         location: true,
         bio: true,
-        priceRange: true,
+        priceRangeMin: true,
+        priceRangeMax: true,
         isAvailable: true,
         onboardingState: true,
       },
@@ -200,7 +205,8 @@ export class ProvidersService {
         location: true,
         bio: true,
         portfolioUrls: true,
-        priceRange: true,
+        priceRangeMin: true,
+        priceRangeMax: true,
         averageRating: true,
         totalReviews: true,
         isAvailable: true,

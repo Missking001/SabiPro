@@ -592,9 +592,9 @@ export default function ConsumerDashboardPage() {
                             provider.isAvailable ? 'bg-success-base' : 'bg-surface-disabled'
                           }`}
                         />
-                        {provider.priceRange && (
+                        {provider.priceRangeMin != null && provider.priceRangeMax != null && (
                           <span className="text-small text-neutral-700">
-                            {provider.priceRange}
+                            ₦{(provider.priceRangeMin / 100).toLocaleString('en-NG')} – ₦{(provider.priceRangeMax / 100).toLocaleString('en-NG')}
                           </span>
                         )}
                       </div>

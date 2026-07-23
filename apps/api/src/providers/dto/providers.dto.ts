@@ -12,9 +12,17 @@ export class CreateProviderDto {
   @IsOptional()
   bio?: string;
 
-  @IsString()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
   @IsOptional()
-  priceRange?: string;
+  priceRangeMin?: number;
+
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  @IsOptional()
+  priceRangeMax?: number;
 }
 
 export class UpdateProviderDto {
@@ -30,9 +38,17 @@ export class UpdateProviderDto {
   @IsOptional()
   location?: string;
 
-  @IsString()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
   @IsOptional()
-  priceRange?: string;
+  priceRangeMin?: number;
+
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  @IsOptional()
+  priceRangeMax?: number;
 
   @IsBoolean()
   @IsOptional()

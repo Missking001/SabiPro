@@ -4,27 +4,46 @@ import {
   BadRequestException,
   ForbiddenException,
   Logger,
-  OnModuleInit,
 } from '@nestjs/common';
+import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from '../prisma/prisma.service';
 import { InitiatePaymentDto } from './dto/payments.dto';
 import { TxStatus, PayoutStatus, PayoutState, Role, NotificationType, Prisma } from '@prisma/client';
 import * as crypto from 'crypto';
 
 @Injectable()
-export class PaymentsService implements OnModuleInit {
+export class PaymentsService {
   private readonly logger = new Logger(PaymentsService.name);
 
   constructor(private readonly prisma: PrismaService) {}
 
-  onModuleInit() {
-    // Run auto-release check every hour
-    setInterval(() => {
-      this.autoReleasePayouts().catch((err) => {
-        this.logger.error('Failed to run auto-release payouts scheduler', err);
-      });
-    }, 60 * 60 * 1000);
-    this.logger.log('Payout auto-release scheduler initialized');
+  async saveBankDetails(userId: string, dto: { bankCode: string; accountNumber: string }) {
+    const provider = await this.prisma.provider.findUnique({ where: { userId } });
+    if (!provider) throw new NotFoundException('Provider profile not found');
+
+    await this.prisma.provider.update({
+      where: { userId },
+      data: { bankCode: dto.bankCode, accountNumber: dto.accountNumber },
+    });
+
+    return { message: 'Bank details saved successfully' };
+  }
+
+  async getBankDetails(userId: string) {
+    const provider = await this.prisma.provider.findUnique({
+      where: { userId },
+      select: { bankCode: true, accountNumber: true },
+    });
+    if (!provider) throw new NotFoundException('Provider profile not found');
+    return { bankCode: provider.bankCode || null, accountNumber: provider.accountNumber || null };
+  }
+
+  @Cron(CronExpression.EVERY_HOUR)
+  async handleAutoReleasePayouts() {
+    this.logger.log('Running scheduled payout auto-release check');
+    await this.autoReleasePayouts().catch((err) => {
+      this.logger.error('Failed to run auto-release payouts scheduler', err);
+    });
   }
 
   /**
@@ -104,7 +123,7 @@ export class PaymentsService implements OnModuleInit {
 
     const provider = await this.prisma.provider.findUnique({
       where: { id: dto.providerId },
-      select: { id: true, priceRange: true, isAvailable: true },
+      select: { id: true, priceRangeMin: true, priceRangeMax: true, isAvailable: true },
     });
     if (!provider) {
       throw new NotFoundException('Provider not found');
@@ -115,20 +134,16 @@ export class PaymentsService implements OnModuleInit {
     }
 
     // Server-side price validation against the provider's price range
-    if (provider.priceRange) {
-      const priceRangeParts = provider.priceRange.split('-').map((p) => parseInt(p.trim(), 10));
-      if (priceRangeParts.length === 2 && priceRangeParts.every((p) => !isNaN(p))) {
-        const [minKobo, maxKobo] = priceRangeParts;
-        if (dto.amount < minKobo) {
-          throw new BadRequestException(
-            `Amount is below the provider's minimum price of ₦${(minKobo / 100).toLocaleString('en-NG')}`,
-          );
-        }
-        if (dto.amount > maxKobo) {
-          throw new BadRequestException(
-            `Amount exceeds the provider's maximum price of ₦${(maxKobo / 100).toLocaleString('en-NG')}`,
-          );
-        }
+    if (provider.priceRangeMin != null && provider.priceRangeMax != null) {
+      if (dto.amount < provider.priceRangeMin) {
+        throw new BadRequestException(
+          `Amount is below the provider's minimum price of ₦${(provider.priceRangeMin / 100).toLocaleString('en-NG')}`,
+        );
+      }
+      if (dto.amount > provider.priceRangeMax) {
+        throw new BadRequestException(
+          `Amount exceeds the provider's maximum price of ₦${(provider.priceRangeMax / 100).toLocaleString('en-NG')}`,
+        );
       }
     }
 
@@ -377,7 +392,7 @@ export class PaymentsService implements OnModuleInit {
     });
   }
 
-  async releasePayout(id: string, userId: string) {
+  async releasePayout(id: string, userId: string, role: string = Role.CONSUMER) {
     const transaction = await this.prisma.transaction.findUnique({
       where: { id },
       select: { id: true, consumerId: true, status: true, amount: true, providerId: true, gatewayRef: true },
@@ -385,11 +400,22 @@ export class PaymentsService implements OnModuleInit {
     if (!transaction) {
       throw new NotFoundException('Transaction not found');
     }
-    if (transaction.consumerId !== userId) {
+    if (role !== Role.ADMIN && transaction.consumerId !== userId) {
       throw new ForbiddenException('Only the consumer can release payout');
     }
     if (transaction.status !== TxStatus.SUCCESSFUL) {
       throw new BadRequestException('Transaction must be successful before releasing payout');
+    }
+
+    const provider = await this.prisma.provider.findUnique({
+      where: { id: transaction.providerId },
+      select: { userId: true, bankCode: true, accountNumber: true },
+    });
+    if (!provider) {
+      throw new NotFoundException('Provider not found');
+    }
+    if (!provider.bankCode || !provider.accountNumber) {
+      throw new BadRequestException('Provider has not set up their bank details yet');
     }
 
     const platformFeePercent = parseInt(process.env.PLATFORM_FEE_PERCENT || '10', 10);
@@ -412,26 +438,19 @@ export class PaymentsService implements OnModuleInit {
           amount: payoutAmount,
           platformFee,
           status: PayoutState.COMPLETED,
-          bankCode: '011',
-          accountNumber: '3000201029',
+          bankCode: provider.bankCode!,
+          accountNumber: provider.accountNumber!,
           processedAt: new Date(),
         },
       });
 
-      const provider = await tx.provider.findUnique({
-        where: { id: transaction.providerId },
-        select: { userId: true },
+      await tx.notification.create({
+        data: {
+          userId: provider.userId,
+          type: NotificationType.PAYOUT_RELEASED,
+          message: `Payout of ₦${(payoutAmount / 100).toLocaleString('en-NG')} has been released to your bank account.`,
+        },
       });
-
-      if (provider) {
-        await tx.notification.create({
-          data: {
-            userId: provider.userId,
-            type: NotificationType.PAYOUT_RELEASED,
-            message: `Payout of ₦${(payoutAmount / 100).toLocaleString('en-NG')} has been released to your bank account.`,
-          },
-        });
-      }
     });
 
     await this.log('PAYOUT_RELEASED', 'SUCCESS', {
@@ -448,7 +467,7 @@ export class PaymentsService implements OnModuleInit {
   async dispute(id: string, userId: string) {
     const transaction = await this.prisma.transaction.findUnique({
       where: { id },
-      select: { id: true, consumerId: true, status: true, gatewayRef: true },
+      select: { id: true, consumerId: true, status: true, gatewayRef: true, providerId: true },
     });
     if (!transaction) {
       throw new NotFoundException('Transaction not found');
@@ -457,9 +476,34 @@ export class PaymentsService implements OnModuleInit {
       throw new ForbiddenException('Only the consumer can dispute this transaction');
     }
 
-    await this.prisma.transaction.update({
-      where: { id },
-      data: { status: TxStatus.DISPUTED },
+    const provider = await this.prisma.provider.findUnique({
+      where: { id: transaction.providerId },
+      select: { userId: true },
+    });
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.transaction.update({
+        where: { id },
+        data: { status: TxStatus.DISPUTED },
+      });
+
+      await tx.notification.create({
+        data: {
+          userId: transaction.consumerId,
+          type: NotificationType.DISPUTE_RAISED,
+          message: `A dispute has been raised on your payment. An admin will review it.`,
+        },
+      });
+
+      if (provider) {
+        await tx.notification.create({
+          data: {
+            userId: provider.userId,
+            type: NotificationType.DISPUTE_RAISED,
+            message: `A dispute has been raised on transaction ${id.slice(0, 8)}... An admin will review it.`,
+          },
+        });
+      }
     });
 
     await this.log('DISPUTE_RAISED', 'DISPUTED', {
@@ -473,15 +517,40 @@ export class PaymentsService implements OnModuleInit {
   async refund(id: string) {
     const transaction = await this.prisma.transaction.findUnique({
       where: { id },
-      select: { id: true, status: true, gatewayRef: true },
+      select: { id: true, status: true, gatewayRef: true, consumerId: true, providerId: true, amount: true },
     });
     if (!transaction) {
       throw new NotFoundException('Transaction not found');
     }
 
-    await this.prisma.transaction.update({
-      where: { id },
-      data: { status: TxStatus.REFUNDED },
+    const provider = await this.prisma.provider.findUnique({
+      where: { id: transaction.providerId },
+      select: { userId: true },
+    });
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.transaction.update({
+        where: { id },
+        data: { status: TxStatus.REFUNDED },
+      });
+
+      await tx.notification.create({
+        data: {
+          userId: transaction.consumerId,
+          type: NotificationType.REFUND_ISSUED,
+          message: `Your payment of ₦${(transaction.amount / 100).toLocaleString('en-NG')} has been refunded.`,
+        },
+      });
+
+      if (provider) {
+        await tx.notification.create({
+          data: {
+            userId: provider.userId,
+            type: NotificationType.REFUND_ISSUED,
+            message: `A refund of ₦${(transaction.amount / 100).toLocaleString('en-NG')} has been issued for transaction ${id.slice(0, 8)}...`,
+          },
+        });
+      }
     });
 
     await this.log('REFUND_ISSUED', 'REFUNDED', {
@@ -503,6 +572,15 @@ export class PaymentsService implements OnModuleInit {
 
     for (const tx of transactions) {
       try {
+        const provider = await this.prisma.provider.findUnique({
+          where: { id: tx.providerId },
+          select: { userId: true, bankCode: true, accountNumber: true },
+        });
+        if (!provider || !provider.bankCode || !provider.accountNumber) {
+          this.logger.warn(`Skipping auto-release for ${tx.id}: provider missing bank details`);
+          continue;
+        }
+
         const platformFeePercent = parseInt(process.env.PLATFORM_FEE_PERCENT || '10', 10);
         const platformFee = Math.round(tx.amount * (platformFeePercent / 100));
         const payoutAmount = tx.amount - platformFee;
@@ -523,26 +601,19 @@ export class PaymentsService implements OnModuleInit {
               amount: payoutAmount,
               platformFee,
               status: PayoutState.COMPLETED,
-              bankCode: '011',
-              accountNumber: '3000201029',
+          bankCode: provider.bankCode!,
+          accountNumber: provider.accountNumber!,
               processedAt: new Date(),
             },
           });
 
-          const provider = await prismaTx.provider.findUnique({
-            where: { id: tx.providerId },
-            select: { userId: true },
+          await prismaTx.notification.create({
+            data: {
+              userId: provider.userId,
+              type: NotificationType.PAYOUT_RELEASED,
+              message: `Payout of ₦${(payoutAmount / 100).toLocaleString('en-NG')} has been auto-released for transaction ${tx.id.slice(0, 8)}...`,
+            },
           });
-
-          if (provider) {
-            await prismaTx.notification.create({
-              data: {
-                userId: provider.userId,
-                type: NotificationType.PAYOUT_RELEASED,
-                message: `Payout of ₦${(payoutAmount / 100).toLocaleString('en-NG')} has been auto-released for transaction ${tx.id.slice(0, 8)}...`,
-              },
-            });
-          }
         });
 
         await this.log('PAYOUT_AUTO_RELEASED', 'SUCCESS', {

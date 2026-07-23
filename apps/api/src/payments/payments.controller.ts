@@ -65,12 +65,12 @@ export class PaymentsController {
 
   @Post(':id/release')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.CONSUMER)
+  @Roles(Role.CONSUMER, Role.ADMIN)
   async releasePayout(
     @Param('id') id: string,
     @CurrentUser() user: AuthenticatedUser,
   ) {
-    return this.paymentsService.releasePayout(id, user.userId);
+    return this.paymentsService.releasePayout(id, user.userId, user.role);
   }
 
   @Post(':id/dispute')

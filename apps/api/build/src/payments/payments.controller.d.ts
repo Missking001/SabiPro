@@ -18,24 +18,24 @@ export declare class PaymentsController {
         message?: undefined;
     }>;
     findOne(id: string, user: AuthenticatedUser): Promise<{
-        provider: {
-            id: string;
-            tradeCategory: string;
-            userId: string;
-        };
         payouts: {
             id: string;
             createdAt: Date;
-            providerId: string;
-            status: import("@prisma/client").$Enums.PayoutState;
-            amount: number;
-            transactionId: string;
-            gatewayRef: string | null;
-            platformFee: number;
             bankCode: string;
             accountNumber: string;
+            amount: number;
+            status: import("@prisma/client").$Enums.PayoutState;
+            gatewayRef: string | null;
+            providerId: string;
+            transactionId: string;
+            platformFee: number;
             processedAt: Date | null;
         }[];
+        provider: {
+            id: string;
+            userId: string;
+            tradeCategory: string;
+        };
         consumer: {
             id: string;
             name: string;
@@ -44,42 +44,42 @@ export declare class PaymentsController {
         id: string;
         createdAt: Date;
         updatedAt: Date;
-        consumerId: string;
-        providerId: string;
-        status: import("@prisma/client").$Enums.TxStatus;
-        amount: number;
         inquiryId: string | null;
-        gatewayRef: string;
+        amount: number;
         currency: string;
+        status: import("@prisma/client").$Enums.TxStatus;
+        gatewayRef: string;
         gatewayStatus: string;
         payoutStatus: import("@prisma/client").$Enums.PayoutStatus;
         payoutReleasedAt: Date | null;
         metadata: import("@prisma/client/runtime/library").JsonValue | null;
+        consumerId: string;
+        providerId: string;
     }>;
     consumerHistory(user: AuthenticatedUser): Promise<({
         provider: {
+            slug: string;
+            tradeCategory: string;
             user: {
                 name: string;
                 avatarUrl: string | null;
             };
-            slug: string;
-            tradeCategory: string;
         };
     } & {
         id: string;
         createdAt: Date;
         updatedAt: Date;
-        consumerId: string;
-        providerId: string;
-        status: import("@prisma/client").$Enums.TxStatus;
-        amount: number;
         inquiryId: string | null;
-        gatewayRef: string;
+        amount: number;
         currency: string;
+        status: import("@prisma/client").$Enums.TxStatus;
+        gatewayRef: string;
         gatewayStatus: string;
         payoutStatus: import("@prisma/client").$Enums.PayoutStatus;
         payoutReleasedAt: Date | null;
         metadata: import("@prisma/client/runtime/library").JsonValue | null;
+        consumerId: string;
+        providerId: string;
     })[]>;
     providerHistory(user: AuthenticatedUser): Promise<({
         consumer: {
@@ -89,17 +89,17 @@ export declare class PaymentsController {
         id: string;
         createdAt: Date;
         updatedAt: Date;
-        consumerId: string;
-        providerId: string;
-        status: import("@prisma/client").$Enums.TxStatus;
-        amount: number;
         inquiryId: string | null;
-        gatewayRef: string;
+        amount: number;
         currency: string;
+        status: import("@prisma/client").$Enums.TxStatus;
+        gatewayRef: string;
         gatewayStatus: string;
         payoutStatus: import("@prisma/client").$Enums.PayoutStatus;
         payoutReleasedAt: Date | null;
         metadata: import("@prisma/client/runtime/library").JsonValue | null;
+        consumerId: string;
+        providerId: string;
     })[]>;
     releasePayout(id: string, user: AuthenticatedUser): Promise<{
         message: string;

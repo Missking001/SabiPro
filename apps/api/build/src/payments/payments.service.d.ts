@@ -6,6 +6,16 @@ export declare class PaymentsService implements OnModuleInit {
     private readonly prisma;
     private readonly logger;
     constructor(prisma: PrismaService);
+    saveBankDetails(userId: string, dto: {
+        bankCode: string;
+        accountNumber: string;
+    }): Promise<{
+        message: string;
+    }>;
+    getBankDetails(userId: string): Promise<{
+        bankCode: any;
+        accountNumber: any;
+    }>;
     onModuleInit(): void;
     private log;
     private verifyFlutterwaveTransaction;
@@ -23,24 +33,24 @@ export declare class PaymentsService implements OnModuleInit {
         message?: undefined;
     }>;
     findOne(id: string, userId: string, role: string): Promise<{
-        provider: {
-            id: string;
-            tradeCategory: string;
-            userId: string;
-        };
         payouts: {
             id: string;
             createdAt: Date;
-            providerId: string;
-            status: import("@prisma/client").$Enums.PayoutState;
-            amount: number;
-            transactionId: string;
-            gatewayRef: string | null;
-            platformFee: number;
             bankCode: string;
             accountNumber: string;
+            amount: number;
+            status: import("@prisma/client").$Enums.PayoutState;
+            gatewayRef: string | null;
+            providerId: string;
+            transactionId: string;
+            platformFee: number;
             processedAt: Date | null;
         }[];
+        provider: {
+            id: string;
+            userId: string;
+            tradeCategory: string;
+        };
         consumer: {
             id: string;
             name: string;
@@ -49,42 +59,42 @@ export declare class PaymentsService implements OnModuleInit {
         id: string;
         createdAt: Date;
         updatedAt: Date;
-        consumerId: string;
-        providerId: string;
-        status: import("@prisma/client").$Enums.TxStatus;
-        amount: number;
         inquiryId: string | null;
-        gatewayRef: string;
+        amount: number;
         currency: string;
+        status: import("@prisma/client").$Enums.TxStatus;
+        gatewayRef: string;
         gatewayStatus: string;
         payoutStatus: import("@prisma/client").$Enums.PayoutStatus;
         payoutReleasedAt: Date | null;
         metadata: Prisma.JsonValue | null;
+        consumerId: string;
+        providerId: string;
     }>;
     getConsumerHistory(userId: string): Promise<({
         provider: {
+            slug: string;
+            tradeCategory: string;
             user: {
                 name: string;
                 avatarUrl: string | null;
             };
-            slug: string;
-            tradeCategory: string;
         };
     } & {
         id: string;
         createdAt: Date;
         updatedAt: Date;
-        consumerId: string;
-        providerId: string;
-        status: import("@prisma/client").$Enums.TxStatus;
-        amount: number;
         inquiryId: string | null;
-        gatewayRef: string;
+        amount: number;
         currency: string;
+        status: import("@prisma/client").$Enums.TxStatus;
+        gatewayRef: string;
         gatewayStatus: string;
         payoutStatus: import("@prisma/client").$Enums.PayoutStatus;
         payoutReleasedAt: Date | null;
         metadata: Prisma.JsonValue | null;
+        consumerId: string;
+        providerId: string;
     })[]>;
     getProviderHistory(userId: string): Promise<({
         consumer: {
@@ -94,17 +104,17 @@ export declare class PaymentsService implements OnModuleInit {
         id: string;
         createdAt: Date;
         updatedAt: Date;
-        consumerId: string;
-        providerId: string;
-        status: import("@prisma/client").$Enums.TxStatus;
-        amount: number;
         inquiryId: string | null;
-        gatewayRef: string;
+        amount: number;
         currency: string;
+        status: import("@prisma/client").$Enums.TxStatus;
+        gatewayRef: string;
         gatewayStatus: string;
         payoutStatus: import("@prisma/client").$Enums.PayoutStatus;
         payoutReleasedAt: Date | null;
         metadata: Prisma.JsonValue | null;
+        consumerId: string;
+        providerId: string;
     })[]>;
     releasePayout(id: string, userId: string): Promise<{
         message: string;

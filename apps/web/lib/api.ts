@@ -121,7 +121,7 @@ export const api = {
     },
     findBySlug: (slug: string) => request<ProviderProfile>(`/api/providers/${slug}`),
     me: () => request<MyProviderProfile | null>('/api/providers/me'),
-    create: (data: { bio?: string; tradeCategory: string; location: string; priceRange?: string }) =>
+    create: (data: { bio?: string; tradeCategory: string; location: string; priceRangeMin?: number; priceRangeMax?: number }) =>
       request<{ id: string; slug: string }>('/api/providers', {
         method: 'POST',
         body: JSON.stringify(data),
@@ -130,7 +130,8 @@ export const api = {
       bio?: string;
       tradeCategory?: string;
       location?: string;
-      priceRange?: string;
+      priceRangeMin?: number;
+      priceRangeMax?: number;
       isAvailable?: boolean;
     }) =>
       request<MyProviderProfile>(`/api/providers/${id}`, {
@@ -210,10 +211,6 @@ export const api = {
     revokeBadge: (id: string) =>
       request<{ message: string }>(`/api/admin/vetting/${id}/revoke`, { method: 'POST' }),
     transactions: () => request<Transaction[]>('/api/admin/transactions'),
-    releasePayout: (id: string) =>
-      request<{ message: string }>(`/api/payments/${id}/release`, { method: 'POST' }),
-    refundTransaction: (id: string) =>
-      request<{ message: string }>(`/api/payments/${id}/refund`, { method: 'POST' }),
   },
 
   payments: {
@@ -229,6 +226,8 @@ export const api = {
       request<{ message: string }>(`/api/payments/${id}/release`, { method: 'POST' }),
     dispute: (id: string) =>
       request<{ message: string }>(`/api/payments/${id}/dispute`, { method: 'POST' }),
+    refund: (id: string) =>
+      request<{ message: string }>(`/api/payments/${id}/refund`, { method: 'POST' }),
   },
 
   payouts: {

@@ -54,6 +54,25 @@ let PaymentsService = PaymentsService_1 = class PaymentsService {
     constructor(prisma) {
         this.prisma = prisma;
     }
+    async saveBankDetails(userId, dto) {
+        const provider = await this.prisma.provider.findUnique({ where: { userId } });
+        if (!provider)
+            throw new common_1.NotFoundException('Provider profile not found');
+        await this.prisma.provider.update({
+            where: { userId },
+            data: { bankCode: dto.bankCode, accountNumber: dto.accountNumber },
+        });
+        return { message: 'Bank details saved successfully' };
+    }
+    async getBankDetails(userId) {
+        const provider = await this.prisma.provider.findUnique({
+            where: { userId },
+            select: { bankCode: true, accountNumber: true },
+        });
+        if (!provider)
+            throw new common_1.NotFoundException('Provider profile not found');
+        return { bankCode: provider.bankCode || null, accountNumber: provider.accountNumber || null };
+    }
     onModuleInit() {
         setInterval(() => {
             this.autoReleasePayouts().catch((err) => {

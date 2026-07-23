@@ -2,92 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import { Skeleton, StatusBanner } from '@/components/ui';
-import { api } from '@/lib/api';
+import { api, ApiClientError } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
 import { useSidebar } from '@/components/admin/SidebarContext';
 import type { Transaction } from '@/types';
 
-/* ── Mock data matching the reference screenshot ── */
-const mockTransactions: (Transaction & { _consumer?: string; _provider?: string; _service?: string })[] = [
-  {
-    id: 'TXN-8821',
-    consumerId: 'c1',
-    providerId: 'p1',
-    amount: 1250000,
-    currency: 'NGN',
-    status: 'PENDING',
-    gatewayRef: 'FLW-8821',
-    createdAt: '2025-07-02T10:00:00Z',
-    _consumer: 'Aisha B.',
-    _provider: 'Emeka Okafor',
-    _service: 'Electrical repair',
-    payoutStatus: 'PENDING',
-  },
-  {
-    id: 'TXN-8820',
-    consumerId: 'c2',
-    providerId: 'p2',
-    amount: 4500000,
-    currency: 'NGN',
-    status: 'SUCCESSFUL',
-    gatewayRef: 'FLW-8820',
-    createdAt: '2025-07-01T10:00:00Z',
-    _consumer: 'Bola D.',
-    _provider: 'Adaeze Nwosu',
-    _service: 'Wedding gown',
-    payoutStatus: 'RELEASED',
-  },
-  {
-    id: 'TXN-8819',
-    consumerId: 'c3',
-    providerId: 'p3',
-    amount: 800000,
-    currency: 'NGN',
-    status: 'DISPUTED',
-    gatewayRef: 'FLW-8819',
-    createdAt: '2025-06-30T10:00:00Z',
-    _consumer: 'Emeka F.',
-    _provider: 'Biodun Adeyemi',
-    _service: 'Plumbing repair',
-    payoutStatus: 'WITHHELD',
-  },
-  {
-    id: 'TXN-8818',
-    consumerId: 'c4',
-    providerId: 'p4',
-    amount: 650000,
-    currency: 'NGN',
-    status: 'SUCCESSFUL',
-    gatewayRef: 'FLW-8818',
-    createdAt: '2025-06-29T10:00:00Z',
-    _consumer: 'Ngozi H.',
-    _provider: 'Chukwudi Eze',
-    _service: 'Car service',
-    payoutStatus: 'RELEASED',
-  },
-  {
-    id: 'TXN-8815',
-    consumerId: 'c5',
-    providerId: 'p5',
-    amount: 1800000,
-    currency: 'NGN',
-    status: 'SUCCESSFUL',
-    gatewayRef: 'FLW-8815',
-    createdAt: '2025-06-28T10:00:00Z',
-    _consumer: 'Tunde K.',
-    _provider: 'Grace Okeke',
-    _service: 'Deep cleaning',
-    payoutStatus: 'RELEASED',
-  },
-];
-
 type TxFilter = 'All' | 'Held' | 'Released' | 'Disputed';
-
-type ExtendedTx = Transaction & {
-  _consumer?: string;
-  _provider?: string;
-  _service?: string;
-};
 
 function formatTxDate(iso: string): string {
   return new Date(iso).toLocaleDateString('en-GB', {
@@ -101,21 +21,24 @@ function formatNaira(kobo: number): string {
   return `₦${(kobo / 100).toLocaleString('en-NG')}`;
 }
 
-function getDisplayStatus(tx: ExtendedTx): { label: string; colorClass: string } {
+function getDisplayStatus(tx: Transaction): { label: string; colorClass: string } {
   if (tx.status === 'DISPUTED') {
     return { label: 'Disputed', colorClass: 'text-[#EF4444] bg-[#FEF2F2]' };
   }
-  if (tx.payoutStatus === 'RELEASED' || tx.status === 'SUCCESSFUL') {
+  if (tx.status === 'SUCCESSFUL') {
     if (tx.payoutStatus === 'RELEASED') {
       return { label: 'Released', colorClass: 'text-[#1A6B3C] bg-[#EAF5EE]' };
     }
     return { label: 'Held', colorClass: 'text-[#D4801A] bg-[#FAEEDA]' };
   }
   if (tx.status === 'PENDING') {
-    return { label: 'Held', colorClass: 'text-[#D4801A] bg-[#FAEEDA]' };
+    return { label: 'Pending', colorClass: 'text-[#D4801A] bg-[#FAEEDA]' };
   }
   if (tx.status === 'REFUNDED') {
     return { label: 'Refunded', colorClass: 'text-[#185FA5] bg-[#E6F1FB]' };
+  }
+  if (tx.status === 'FAILED') {
+    return { label: 'Failed', colorClass: 'text-[#71717A] bg-[#F4F4F5]' };
   }
   return { label: tx.status, colorClass: 'text-[#71717A] bg-[#F4F4F5]' };
 }
@@ -123,26 +46,76 @@ function getDisplayStatus(tx: ExtendedTx): { label: string; colorClass: string }
 export default function AdminTransactionsPage() {
   const { user } = useAuth();
   const { toggle: toggleSidebar } = useSidebar();
-  const [transactions, setTransactions] = useState<ExtendedTx[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [feedback, setFeedback] = useState('');
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState<TxFilter>('All');
 
   useEffect(() => {
     async function load() {
       try {
         const res = await api.admin.transactions();
-        const live = res.data || [];
-        setTransactions(live.length > 0 ? live : mockTransactions);
-      } catch {
-        setTransactions(mockTransactions);
+        setTransactions(res.data || []);
+      } catch (err) {
+        if (err instanceof ApiClientError) {
+          setError(err.message);
+        } else {
+          setError('Failed to load transactions');
+        }
       } finally {
         setIsLoading(false);
       }
     }
     load();
   }, []);
+
+  async function handleRelease(txId: string) {
+    setActionLoading(txId);
+    setError('');
+    setFeedback('');
+    try {
+      const res = await api.payments.releasePayout(txId);
+      setFeedback(res.data?.message || `Release initiated for ${txId}`);
+      setTransactions((prev) =>
+        prev.map((tx) =>
+          tx.id === txId ? { ...tx, payoutStatus: 'RELEASED' as const } : tx,
+        ),
+      );
+    } catch (err) {
+      if (err instanceof ApiClientError) {
+        setError(err.message);
+      } else {
+        setError('Failed to release payout');
+      }
+    } finally {
+      setActionLoading(null);
+    }
+  }
+
+  async function handleRefund(txId: string) {
+    setActionLoading(txId);
+    setError('');
+    setFeedback('');
+    try {
+      const res = await api.payments.refund(txId);
+      setFeedback(res.data?.message || `Refund processed for ${txId}`);
+      setTransactions((prev) =>
+        prev.map((tx) =>
+          tx.id === txId ? { ...tx, status: 'REFUNDED' as const } : tx,
+        ),
+      );
+    } catch (err) {
+      if (err instanceof ApiClientError) {
+        setError(err.message);
+      } else {
+        setError('Failed to process refund');
+      }
+    } finally {
+      setActionLoading(null);
+    }
+  }
 
   const filters: TxFilter[] = ['All', 'Held', 'Released', 'Disputed'];
 
@@ -274,14 +247,13 @@ export default function AdminTransactionsPage() {
               <tbody>
                 {filtered.map((tx) => {
                   const displayStatus = getDisplayStatus(tx);
-                  const consumer = (tx as ExtendedTx)._consumer || `ID: ${tx.consumerId.slice(0, 6)}`;
-                  const provider = (tx as ExtendedTx)._provider || tx.provider?.user?.name || `ID: ${tx.providerId.slice(0, 6)}`;
-                  const service = (tx as ExtendedTx)._service || tx.provider?.tradeCategory || '—';
-                  const txId = tx.id.startsWith('TXN-') ? tx.id : `TXN-${tx.id.slice(0, 4)}`;
+                  const consumer = tx.consumer?.name || `ID: ${tx.consumerId.slice(0, 6)}`;
+                  const provider = tx.provider?.user?.name || `ID: ${tx.providerId.slice(0, 6)}`;
+                  const service = tx.provider?.tradeCategory || '—';
+                  const txId = `TXN-${tx.id.slice(0, 4)}`;
 
                   const isHeld = displayStatus.label === 'Held';
                   const isDisputed = displayStatus.label === 'Disputed';
-                  const isReleased = displayStatus.label === 'Released';
 
                   return (
                     <tr key={tx.id} className="border-b border-[#F4F4F5] last:border-b-0 hover:bg-[#FAFAF9] transition-colors">
@@ -301,19 +273,21 @@ export default function AdminTransactionsPage() {
                           {isHeld && (
                             <button
                               type="button"
-                              onClick={() => setFeedback(`Release initiated for ${txId}`)}
-                              className="text-xs font-semibold text-[#1A6B3C] border border-[#1A6B3C] px-3 py-1.5 rounded-md hover:bg-[#EAF5EE] transition-colors"
+                              onClick={() => handleRelease(tx.id)}
+                              disabled={actionLoading === tx.id}
+                              className="text-xs font-semibold text-[#1A6B3C] border border-[#1A6B3C] px-3 py-1.5 rounded-md hover:bg-[#EAF5EE] transition-colors disabled:opacity-50"
                             >
-                              Release
+                              {actionLoading === tx.id ? '...' : 'Release'}
                             </button>
                           )}
                           {isDisputed && (
                             <button
                               type="button"
-                              onClick={() => setFeedback(`Refund processed for ${txId}`)}
-                              className="text-xs font-semibold text-[#EF4444] border border-[#EF4444] px-3 py-1.5 rounded-md hover:bg-[#FEF2F2] transition-colors"
+                              onClick={() => handleRefund(tx.id)}
+                              disabled={actionLoading === tx.id}
+                              className="text-xs font-semibold text-[#EF4444] border border-[#EF4444] px-3 py-1.5 rounded-md hover:bg-[#FEF2F2] transition-colors disabled:opacity-50"
                             >
-                              Refund
+                              {actionLoading === tx.id ? '...' : 'Refund'}
                             </button>
                           )}
                           <button

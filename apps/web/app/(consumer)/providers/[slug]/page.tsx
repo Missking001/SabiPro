@@ -98,7 +98,9 @@ export default async function ProviderProfilePage({ params }: { params: { slug: 
               <p className="text-small text-neutral-0/60 mb-3">📍 {provider.location}</p>
               <div className="flex items-center gap-4 text-small text-neutral-0/70">
                 <span>⭐ {provider.averageRating.toFixed(1)} ({provider.totalReviews} reviews)</span>
-                {provider.priceRange && <span>💰 {provider.priceRange}</span>}
+                {provider.priceRangeMin != null && provider.priceRangeMax != null && (
+                  <span>💰 ₦{(provider.priceRangeMin / 100).toLocaleString('en-NG')} – ₦{(provider.priceRangeMax / 100).toLocaleString('en-NG')}</span>
+                )}
               </div>
             </div>
           </div>

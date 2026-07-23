@@ -45,7 +45,8 @@ export interface ProviderSummary {
   tradeCategory: string;
   location: string;
   bio?: string | null;
-  priceRange?: string | null;
+  priceRangeMin?: number | null;
+  priceRangeMax?: number | null;
   averageRating: number;
   totalReviews: number;
   isVerified: boolean;
@@ -109,6 +110,7 @@ export interface Transaction {
   gatewayRef: string;
   createdAt: string;
   payoutStatus?: PayoutStatus;
+  consumer?: { name: string };
   provider?: {
     tradeCategory: string;
     slug: string;
