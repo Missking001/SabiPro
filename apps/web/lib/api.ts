@@ -123,7 +123,7 @@ export const api = {
     },
     findBySlug: (slug: string) => request<ProviderProfile>(`/api/providers/${slug}`),
     me: () => request<MyProviderProfile | null>('/api/providers/me'),
-    create: (data: { bio?: string; tradeCategory: string; location: string; priceRangeMin?: number; priceRangeMax?: number }) =>
+    create: (data: { bio?: string; tradeCategory: string; location: string; priceRangeMin?: number; priceRangeMax?: number; portfolioUrls?: string[] }) =>
       request<{ id: string; slug: string }>('/api/providers', {
         method: 'POST',
         body: JSON.stringify(data),
@@ -135,6 +135,7 @@ export const api = {
       priceRangeMin?: number;
       priceRangeMax?: number;
       isAvailable?: boolean;
+      portfolioUrls?: string[];
     }) =>
       request<MyProviderProfile>(`/api/providers/${id}`, {
         method: 'PATCH',

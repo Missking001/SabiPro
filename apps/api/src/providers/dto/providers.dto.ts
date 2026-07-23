@@ -23,6 +23,10 @@ export class CreateProviderDto {
   @Min(0)
   @IsOptional()
   priceRangeMax?: number;
+
+  @IsArray()
+  @IsOptional()
+  portfolioUrls?: string[];
 }
 
 export class UpdateProviderDto {

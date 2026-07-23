@@ -76,6 +76,7 @@ export default function ProviderProfilePage() {
           priceRangeMin: minKobo,
           priceRangeMax: maxKobo,
           isAvailable,
+          portfolioUrls,
         });
         if (updatedRes.data) setProvider(updatedRes.data);
         setSuccess('Profile updated successfully');
@@ -86,6 +87,7 @@ export default function ProviderProfilePage() {
           location,
           priceRangeMin: minKobo,
           priceRangeMax: maxKobo,
+          portfolioUrls,
         });
         setProviderId(res.data?.id || '');
         setSuccess('Profile created successfully');

@@ -137,6 +137,7 @@ export class ProvidersService {
         location: dto.location.trim(),
         priceRangeMin: dto.priceRangeMin,
         priceRangeMax: dto.priceRangeMax,
+        portfolioUrls: dto.portfolioUrls ?? [],
         onboardingState: OnboardingState.PROFILE_COMPLETE,
       },
       select: {
