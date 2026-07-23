@@ -365,9 +365,9 @@ export default function ProviderProfilePage() {
                 value={priceRangeMax}
                 onChange={(e) => setPriceRangeMax(e.target.value)}
               />
-              <p className="text-caption text-error-base mt-1" id="price-debug">
-                DB value: {provider?.priceRangeMax ?? 'null'} &middot; display: {priceRangeMax || '(empty)'}
-              </p>
+              <div className="mt-2 p-2 bg-yellow-100 border border-yellow-300 rounded text-xs font-mono">
+                <strong>DEBUG:</strong> API max={String(provider?.priceRangeMax ?? 'null')} | input="{priceRangeMax}" | /100={provider?.priceRangeMax != null ? provider.priceRangeMax / 100 : 'N/A'}
+              </div>
             </div>
           </div>
 
