@@ -537,14 +537,30 @@ export default function ProviderProfilePage() {
           </div>
 
           {/* Vetting Status Card */}
-          <div className="bg-[#FFFDF7] border border-amber-200 rounded-card p-4 shadow-xs space-y-2">
-            <div className="flex items-center gap-2 text-amber-800">
-              <svg className="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+          <div className={`rounded-card p-4 shadow-xs space-y-2 border ${
+            provider?.isVerified
+              ? 'bg-blue-50 border-blue-200'
+              : provider?.onboardingState === 'PROFILE_COMPLETE'
+              ? 'bg-[#FFFDF7] border-amber-200'
+              : 'bg-neutral-50 border-neutral-200'
+          }`}>
+            <div className={`flex items-center gap-2 ${
+              provider?.isVerified ? 'text-blue-800' : 'text-amber-800'
+            }`}>
+              <svg className={`w-5 h-5 ${
+                provider?.isVerified ? 'text-blue-500' : 'text-amber-600'
+              }`} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 01-1.043 3.296 3.745 3.745 0 01-3.296 1.043A3.745 3.745 0 0112 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 01-3.296-1.043 3.745 3.745 0 01-1.043-3.296A3.745 3.745 0 013 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 0110.43-3.296A3.745 3.745 0 0112 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 013.296 1.043 3.746 3.746 0 011.043 3.296A3.745 3.745 0 0121 12z" />
               </svg>
-              <h3 className="text-small font-semibold text-amber-900">Vetting Status</h3>
+              <h3 className={`text-small font-semibold ${
+                provider?.isVerified ? 'text-blue-900' : 'text-amber-900'
+              }`}>Vetting Status</h3>
             </div>
-            <p className="text-caption text-amber-900/80 leading-relaxed">
+            <p className={`text-caption leading-relaxed ${
+              provider?.isVerified
+                ? 'text-blue-800/80'
+                : 'text-amber-900/80'
+            }`}>
               {provider?.isVerified
                 ? 'You currently hold an ID + Credential badge, issued by the SabiPro ops team.'
                 : provider?.onboardingState === 'PROFILE_COMPLETE'
@@ -554,16 +570,16 @@ export default function ProviderProfilePage() {
             <div className="pt-1">
               <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full border ${
                 provider?.isVerified
-                  ? 'bg-amber-100 text-amber-900 border-amber-300'
-                  : provider?.onboardingState === 'PROFILE_COMPLETE'
                   ? 'bg-blue-50 text-blue-700 border-blue-200'
+                  : provider?.onboardingState === 'PROFILE_COMPLETE'
+                  ? 'bg-amber-100 text-amber-900 border-amber-300'
                   : 'bg-neutral-100 text-neutral-600 border-neutral-200'
               }`}>
                 <span className={`w-1.5 h-1.5 rounded-full ${
                   provider?.isVerified
-                    ? 'bg-amber-600'
-                    : provider?.onboardingState === 'PROFILE_COMPLETE'
                     ? 'bg-blue-500'
+                    : provider?.onboardingState === 'PROFILE_COMPLETE'
+                    ? 'bg-amber-600'
                     : 'bg-neutral-400'
                 }`} />
                 {provider?.isVerified ? 'ID + Credential' : provider?.onboardingState === 'PROFILE_COMPLETE' ? 'Pending approval' : 'Registered Provider'}
