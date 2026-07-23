@@ -131,8 +131,8 @@ export default function ProviderProfilePage() {
     try {
       const res = await api.uploads.avatar(file);
       const avatarUrl = res.data?.url;
-      if (avatarUrl && provider) {
-        setProvider({ ...provider, user: { ...provider.user, avatarUrl } });
+      if (avatarUrl) {
+        setProvider((prev) => prev ? { ...prev, user: { ...prev.user, avatarUrl } } : prev);
       }
       setSuccess('Profile photo updated');
     } catch (err) {
