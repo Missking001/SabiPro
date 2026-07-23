@@ -40,7 +40,13 @@ export default function OnboardingPage() {
     if (avatar) {
       localStorage.setItem('sabipro_avatar', avatar);
     }
-    router.push('/dashboard');
+    // Route providers to their dedicated dashboard
+    const userRole = (session?.user as any)?.role;
+    if (userRole === 'PROVIDER') {
+      router.push('/provider/dashboard');
+    } else {
+      router.push('/dashboard');
+    }
     router.refresh();
   }
 

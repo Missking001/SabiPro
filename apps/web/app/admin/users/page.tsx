@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Skeleton, StatusBanner } from '@/components/ui';
+import { AdminHelpButton } from '@/components/admin/AdminHelpButton';
 import { api, ApiClientError } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
 import { useSidebar } from '@/components/admin/SidebarContext';
@@ -315,14 +316,7 @@ export default function AdminUsersPage() {
         </div>
       )}
 
-      {/* ── Help FAB ── */}
-      <button
-        type="button"
-        className="fixed bottom-6 right-6 w-10 h-10 rounded-full bg-white border border-[#E5E7EB] shadow-md flex items-center justify-center text-[#71717A] hover:text-[#18181B] hover:shadow-lg transition-all z-50"
-        aria-label="Help"
-      >
-        ?
-      </button>
+      <AdminHelpButton />
     </div>
   );
 }
