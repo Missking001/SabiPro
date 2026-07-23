@@ -377,6 +377,75 @@ export default function ProviderDashboardPage() {
             </div>
           </Link>
         </div>
+
+        {/* Notifications Section anchored by #notifications */}
+        <div id="notifications" className="scroll-mt-4">
+          {notifications.length > 0 && (
+            <div className="bg-white rounded-card border border-surface-border p-4 shadow-xs">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-subhead font-semibold text-neutral-900">
+                  Notifications
+                  {unreadNotifsCount > 0 && (
+                    <span className="ml-2 text-xs font-medium text-white bg-primary-base px-2 py-0.5 rounded-full">
+                      {unreadNotifsCount}
+                    </span>
+                  )}
+                </h2>
+                {unreadNotifsCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        await api.notifications.markAllRead();
+                        setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+                      } catch {}
+                    }}
+                    className="text-small text-primary-base hover:text-primary-hover font-medium"
+                  >
+                    Mark all as read
+                  </button>
+                )}
+              </div>
+              <div className="space-y-2">
+                {notifications.slice(0, 5).map((n) => (
+                  <div
+                    key={n.id}
+                    className={`p-3 rounded-component border transition-colors ${
+                      n.isRead
+                        ? 'bg-white border-surface-border'
+                        : 'bg-primary-tint border-primary-base/20'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-small text-neutral-900">{n.message}</p>
+                        <p className="text-caption text-neutral-400 mt-0.5">
+                          {formatDate(n.createdAt)}
+                        </p>
+                      </div>
+                      {!n.isRead && (
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            try {
+                              await api.notifications.markRead(n.id);
+                              setNotifications((prev) =>
+                                prev.map((x) => (x.id === n.id ? { ...x, isRead: true } : x)),
+                              );
+                            } catch {}
+                          }}
+                          className="text-xs text-primary-base font-medium whitespace-nowrap hover:underline"
+                        >
+                          Mark read
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
