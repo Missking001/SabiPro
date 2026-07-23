@@ -141,8 +141,8 @@ export default function ProviderDashboardPage() {
 
   return (
     <div className="min-h-screen bg-[#FAF9F5] pb-16">
-      {/* Dark Banner Header matching mockup */}
-      <div className="bg-[#1A1A1A] text-white pt-8 pb-10 px-4 md:px-8 shadow-md">
+      {/* Header */}
+      <div className="bg-primary-base text-white pt-8 pb-10 px-4 md:px-6 shadow-md">
         <div className="max-w-3xl mx-auto flex items-start justify-between">
           <div>
             <p className="text-caption text-neutral-400 font-medium mb-1">Provider dashboard</p>
@@ -163,18 +163,18 @@ export default function ProviderDashboardPage() {
           <div className="flex items-center gap-3">
             <Link
               href="/provider/dashboard#notifications"
-              className="relative p-2 rounded-full bg-neutral-800 text-neutral-300 hover:text-white transition-colors"
+              className="relative p-2 rounded-full bg-primary-deep text-white/80 hover:text-white transition-colors"
               title="Notifications"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0018 9.75V9A6 6 0 006 9v.75a8.967 8.967 0 00-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
               </svg>
               {unreadNotifsCount > 0 && (
-                <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-amber-500 rounded-full ring-2 ring-[#1A1A1A]" />
+                <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-amber-500 rounded-full ring-2 ring-primary-base" />
               )}
             </Link>
 
-            <div className="relative w-10 h-10 rounded-full overflow-hidden border-2 border-neutral-700 bg-neutral-800 flex items-center justify-center text-sm font-semibold text-white">
+            <div className="relative w-10 h-10 rounded-full overflow-hidden border-2 border-primary-deep bg-primary-deep flex items-center justify-center text-sm font-semibold text-white">
               {provider.user?.avatarUrl ? (
                 <Image
                   src={provider.user.avatarUrl}
