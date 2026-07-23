@@ -227,7 +227,7 @@ export default function ProviderProfilePage() {
           <div className="bg-white rounded-card border border-surface-border p-4 shadow-xs">
             <h2 className="text-small font-semibold text-neutral-900 mb-3">Profile photo</h2>
             <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-xl bg-neutral-800 text-white flex items-center justify-center font-bold text-lg overflow-hidden relative border border-surface-border flex-shrink-0">
+              <div className="w-14 h-14 rounded-full bg-neutral-800 text-white flex items-center justify-center font-bold text-lg overflow-hidden relative border border-surface-border flex-shrink-0">
                 {(avatarPreview || provider?.user?.avatarUrl) ? (
                   <Image
                     src={avatarPreview || provider!.user.avatarUrl!}
