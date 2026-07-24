@@ -111,6 +111,18 @@ export class UploadsController {
 
       const url = await this.supabase.upload('sabipro', path, file.buffer, file.mimetype);
 
+      // Persist to provider's documentUrls so it survives page refresh
+      const provider = await this.prisma.provider.findUnique({
+        where: { userId: user.userId },
+        select: { id: true, documentUrls: true },
+      });
+      if (provider) {
+        await this.prisma.provider.update({
+          where: { id: provider.id },
+          data: { documentUrls: [...provider.documentUrls, url] },
+        });
+      }
+
       this.logger.log(`Document uploaded for user ${user.userId}`);
       return { url };
     } catch (err: any) {
