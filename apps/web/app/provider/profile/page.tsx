@@ -9,6 +9,14 @@ import { api, ApiClientError } from '@/lib/api';
 import { getInitials } from '@/lib/utils';
 import type { MyProviderProfile } from '@/types';
 
+function formatComma(n: string): string {
+  const cleaned = n.replace(/,/g, '').replace(/[^0-9.]/g, '');
+  if (!cleaned) return '';
+  const parts = cleaned.split('.');
+  parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  return parts.length > 1 ? `${parts[0]}.${parts[1]}` : parts[0];
+}
+
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 const ALLOWED_DOC_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
 const MAX_AVATAR_SIZE = 1 * 1024 * 1024;
@@ -79,8 +87,8 @@ export default function ProviderProfilePage() {
     setSuccess('');
     setIsLoading(true);
 
-    const minKobo = priceRangeMin ? Math.round(parseFloat(priceRangeMin) * 100) : undefined;
-    const maxKobo = priceRangeMax ? Math.round(parseFloat(priceRangeMax) * 100) : undefined;
+    const minKobo = priceRangeMin ? Math.round(parseFloat(priceRangeMin.replace(/,/g, '')) * 100) : undefined;
+    const maxKobo = priceRangeMax ? Math.round(parseFloat(priceRangeMax.replace(/,/g, '')) * 100) : undefined;
 
     try {
       if (providerId) {
@@ -359,19 +367,20 @@ export default function ProviderProfilePage() {
             <div className="grid grid-cols-2 gap-3">
               <Input
                 label="Min. price (₦)"
-                type="number"
+                type="text"
+                inputMode="numeric"
                 placeholder="5,000"
                 value={priceRangeMin}
-                onChange={(e) => setPriceRangeMin(e.target.value)}
+                onChange={(e) => setPriceRangeMin(formatComma(e.target.value))}
               />
               <Input
                 label="Max. price (₦)"
-                type="number"
+                type="text"
+                inputMode="numeric"
                 placeholder="25,000"
                 value={priceRangeMax}
-                onChange={(e) => setPriceRangeMax(e.target.value)}
+                onChange={(e) => setPriceRangeMax(formatComma(e.target.value))}
               />
-
             </div>
           </div>
 
