@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { signOut } from 'next-auth/react';
 import Image from 'next/image';
 import { Button, Input, StatusBanner, Skeleton } from '@/components/ui';
 import { api, ApiClientError } from '@/lib/api';
@@ -644,18 +645,12 @@ export default function ProviderProfilePage() {
             <button
               type="button"
               onClick={async () => {
-                if (!confirm('Switch to consumer account? You can switch back anytime.')) return;
-                try {
-                  await api.providers.switchToConsumer();
-                  setSuccess('Switched to consumer account');
-                  setTimeout(() => router.push('/'), 2000);
-                } catch (err) {
-                  setError(err instanceof ApiClientError ? err.message : 'Failed to switch account');
-                }
+                await signOut({ redirect: false });
+                router.push('/auth/login');
               }}
               className="text-small text-neutral-500 hover:text-error-base font-medium transition-colors"
             >
-              Switch to consumer
+              Sign out & switch to consumer
             </button>
           </div>
         </form>
