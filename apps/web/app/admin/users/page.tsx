@@ -15,59 +15,9 @@ interface AdminUser {
   isActive: boolean;
   createdAt: string;
   city?: string;
-  _location?: string;
-  _isFlagged?: boolean;
 }
 
-/* ── Mock data matching the reference screenshot ── */
-const mockUsers: AdminUser[] = [
-  {
-    id: 'mock-u1',
-    name: 'Aisha Bello',
-    email: 'aisha@example.com',
-    role: 'CONSUMER',
-    isActive: true,
-    createdAt: '2025-01-15T00:00:00Z',
-    _location: 'Lagos',
-  },
-  {
-    id: 'mock-u2',
-    name: 'Emeka Okafor',
-    email: 'emeka@example.com',
-    role: 'PROVIDER',
-    isActive: true,
-    createdAt: '2025-01-10T00:00:00Z',
-    _location: 'Lagos',
-  },
-  {
-    id: 'mock-u3',
-    name: 'Fast Fix Mechanics',
-    email: 'fastfix@example.com',
-    role: 'PROVIDER',
-    isActive: true,
-    createdAt: '2025-03-22T00:00:00Z',
-    _location: 'Abuja',
-    _isFlagged: true,
-  },
-  {
-    id: 'mock-u4',
-    name: 'Ngozi Mensah',
-    email: 'ngozi@example.com',
-    role: 'CONSUMER',
-    isActive: true,
-    createdAt: '2025-04-05T00:00:00Z',
-    _location: 'Abuja',
-  },
-  {
-    id: 'mock-u5',
-    name: 'Seun Adeyemi',
-    email: 'seun@example.com',
-    role: 'CONSUMER',
-    isActive: false,
-    createdAt: '2025-05-02T00:00:00Z',
-    _location: 'Lagos',
-  },
-];
+type RoleFilter = 'All' | 'CONSUMER' | 'PROVIDER' | 'ADMIN';
 
 function formatJoinDate(iso: string): string {
   return new Date(iso).toLocaleDateString('en-GB', {
@@ -86,6 +36,7 @@ export default function AdminUsersPage() {
   const [feedback, setFeedback] = useState('');
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
+  const [roleFilter, setRoleFilter] = useState<RoleFilter>('All');
 
   useEffect(() => {
     loadUsers();
@@ -94,10 +45,9 @@ export default function AdminUsersPage() {
   async function loadUsers() {
     try {
       const res = await api.admin.users();
-      const live = res.data || [];
-      setUsers(live.length > 0 ? live : mockUsers);
-    } catch {
-      setUsers(mockUsers);
+      setUsers(res.data || []);
+    } catch (err) {
+      setError(err instanceof ApiClientError ? err.message : 'Failed to load users');
     } finally {
       setIsLoading(false);
     }
@@ -106,23 +56,22 @@ export default function AdminUsersPage() {
   async function handleSuspend(id: string) {
     setProcessingId(id);
     setFeedback('');
-    await new Promise((r) => setTimeout(r, 500));
-    if (!id.startsWith('mock-')) {
-      try {
-        await api.admin.suspendUser(id);
-      } catch (err) {
-        setFeedback(err instanceof ApiClientError ? err.message : 'Failed to update user');
-        setProcessingId(null);
-        return;
-      }
+    try {
+      await api.admin.suspendUser(id);
+      setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, isActive: !u.isActive } : u)));
+      const u = users.find((x) => x.id === id);
+      setFeedback(u?.isActive ? 'User suspended' : 'User reinstated');
+    } catch (err) {
+      setFeedback(err instanceof ApiClientError ? err.message : 'Failed to update user');
+    } finally {
+      setProcessingId(null);
     }
-    setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, isActive: !u.isActive } : u)));
-    const user = users.find((u) => u.id === id);
-    setFeedback(user?.isActive ? 'User suspended' : 'User reinstated');
-    setProcessingId(null);
   }
 
+  const roleFilters: RoleFilter[] = ['All', 'CONSUMER', 'PROVIDER', 'ADMIN'];
+
   const filtered = users.filter((u) =>
+    (roleFilter === 'All' || u.role === roleFilter) &&
     u.name.toLowerCase().includes(search.toLowerCase()),
   );
 
@@ -221,6 +170,24 @@ export default function AdminUsersPage() {
       {feedback && <StatusBanner variant="success" className="mb-0">{feedback}</StatusBanner>}
       {error && <StatusBanner variant="error" className="mb-0">{error}</StatusBanner>}
 
+      {/* ── Role Filter Tabs ── */}
+      <div className="flex flex-wrap gap-2">
+        {roleFilters.map((f) => (
+          <button
+            key={f}
+            type="button"
+            onClick={() => setRoleFilter(f)}
+            className={`px-4 py-2 text-xs font-semibold rounded-full border transition-colors ${
+              roleFilter === f
+                ? 'bg-[#18181B] text-white border-[#18181B]'
+                : 'bg-white text-[#18181B] border-[#E5E7EB] hover:bg-[#F4F4F5]'
+            }`}
+          >
+            {f === 'All' ? 'All Users' : f.charAt(0) + f.slice(1).toLowerCase() + 's'}
+          </button>
+        ))}
+      </div>
+
       {/* ── Users Table ── */}
       {filtered.length === 0 ? (
         <div className="bg-white rounded-xl border border-[#E5E7EB] text-center py-16">
@@ -245,42 +212,30 @@ export default function AdminUsersPage() {
               </thead>
               <tbody>
                 {filtered.map((u) => {
-                  const location = (u as AdminUser)._location || u.city || '—';
-                  const isFlagged = (u as AdminUser)._isFlagged;
                   const isProcessing = processingId === u.id;
-                  const isConsumer = u.role === 'CONSUMER';
 
-                  let statusLabel: string;
-                  let statusClass: string;
-                  if (!u.isActive) {
-                    statusLabel = 'Suspended';
-                    statusClass = 'text-[#71717A]';
-                  } else if (isFlagged) {
-                    statusLabel = 'Flagged';
-                    statusClass = 'text-[#EF4444] bg-[#FEF2F2] border border-[#FECACA] px-2 py-0.5 rounded text-xs font-medium';
-                  } else {
-                    statusLabel = 'Active';
-                    statusClass = 'text-[#1A6B3C] font-medium';
-                  }
+                  const roleLabel = u.role === 'CONSUMER' ? 'Consumer' : u.role === 'PROVIDER' ? 'Provider' : 'Admin';
+                  const roleColor = u.role === 'CONSUMER'
+                    ? 'bg-[#E6F1FB] text-[#185FA5]'
+                    : u.role === 'PROVIDER'
+                    ? 'bg-[#EAF5EE] text-[#1A6B3C]'
+                    : 'bg-[#FAEEDA] text-[#633806]';
+
+                  const statusLabel = u.isActive ? 'Active' : 'Suspended';
+                  const statusColor = u.isActive ? 'text-[#1A6B3C] font-medium' : 'text-[#71717A]';
 
                   return (
                     <tr key={u.id} className="border-b border-[#F4F4F5] last:border-b-0 hover:bg-[#FAFAF9] transition-colors">
                       <td className="py-4 px-6 text-sm font-medium text-[#18181B]">{u.name}</td>
                       <td className="py-4 px-6">
-                        <span
-                          className={`inline-block text-xs font-semibold px-3 py-1 rounded-full ${
-                            isConsumer
-                              ? 'bg-[#EAF5EE] text-[#1A6B3C]'
-                              : 'bg-[#EAF5EE] text-[#1A6B3C]'
-                          }`}
-                        >
-                          {isConsumer ? 'Consumer' : 'Provider'}
+                        <span className={`inline-block text-xs font-semibold px-3 py-1 rounded-full ${roleColor}`}>
+                          {roleLabel}
                         </span>
                       </td>
-                      <td className="py-4 px-6 text-sm text-[#71717A]">{location}</td>
+                      <td className="py-4 px-6 text-sm text-[#71717A]">{u.city || '—'}</td>
                       <td className="py-4 px-6 text-sm text-[#71717A] whitespace-nowrap">{formatJoinDate(u.createdAt)}</td>
                       <td className="py-4 px-6">
-                        <span className={`text-sm ${statusClass}`}>{statusLabel}</span>
+                        <span className={`text-sm ${statusColor}`}>{statusLabel}</span>
                       </td>
                       <td className="py-4 px-6">
                         <div className="flex items-center gap-3">
