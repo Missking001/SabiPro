@@ -513,7 +513,7 @@ export default function ProviderProfilePage() {
                   onClick={() => idInputRef.current?.click()}
                   className="text-xs font-semibold text-primary-base hover:text-primary-hover disabled:opacity-50 flex-shrink-0"
                 >
-                  {uploadingDocument === 'ID' ? 'Uploading...' : 'Re-upload'}
+                  {uploadingDocument === 'ID' ? 'Uploading...' : idDocUrl ? 'Re-upload' : 'Upload'}
                 </button>
               </div>
 
@@ -563,7 +563,7 @@ export default function ProviderProfilePage() {
                   onClick={() => credentialInputRef.current?.click()}
                   className="text-xs font-semibold text-primary-base hover:text-primary-hover disabled:opacity-50 flex-shrink-0"
                 >
-                  {uploadingDocument === 'Credential' ? 'Uploading...' : 'Re-upload'}
+                  {uploadingDocument === 'Credential' ? 'Uploading...' : credentialDocUrl ? 'Re-upload' : 'Upload'}
                 </button>
               </div>
             </div>
