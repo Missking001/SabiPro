@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 
 const STEPS = [
@@ -58,7 +57,6 @@ const TRADE_CATEGORIES = [
 ];
 
 export default function BecomeProviderPage() {
-  const router = useRouter();
   const { user } = useAuth();
   const [selectedTrade, setSelectedTrade] = useState('');
 
@@ -152,12 +150,12 @@ export default function BecomeProviderPage() {
         <div className="bg-primary-tint border border-primary-base/20 rounded-card p-5 md:p-6 text-center">
           <h3 className="text-subhead font-medium text-neutral-900 mb-2">Ready to get started?</h3>
           <p className="text-small text-neutral-500 mb-5">Create your provider profile today — it only takes 5 minutes.</p>
-          <button
-            onClick={() => router.push('/register?role=provider')}
-            className="w-full h-12 bg-primary-base hover:bg-primary-deep text-white text-body font-medium rounded-component transition-colors shadow-sm"
+          <Link
+            href="/register?role=provider"
+            className="block w-full h-12 bg-primary-base hover:bg-primary-deep text-white text-body font-medium rounded-component transition-colors shadow-sm leading-12 text-center"
           >
             Register as a provider
-          </button>
+          </Link>
           <p className="text-caption text-neutral-500 mt-3">
             Already have an account?{' '}
             <Link href="/login" className="text-primary-base hover:text-primary-hover underline">
