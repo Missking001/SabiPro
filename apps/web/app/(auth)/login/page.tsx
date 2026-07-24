@@ -39,6 +39,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [selectedRole, setSelectedRole] = useState<'CONSUMER' | 'PROVIDER' | null>(null);
   const [adminCode, setAdminCode] = useState('');
   const [isAdminMode, setIsAdminMode] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
@@ -97,7 +98,7 @@ export default function LoginPage() {
         return;
       }
 
-      const result = await login(email.trim(), password);
+      const result = await login(email.trim(), password, selectedRole!);
 
       if (result?.error) {
         const msg = result.error;
@@ -318,14 +319,51 @@ export default function LoginPage() {
               </>
             )}
 
+            {/* Role selector (only for non-admin) */}
+            {!isAdminMode && (
+              <div className="space-y-2">
+                <label className="text-small font-medium text-neutral-700">I am a</label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedRole('CONSUMER')}
+                    className={`flex items-center justify-center gap-2 py-3 px-4 rounded-[14px] border-2 text-sm font-semibold transition-all ${
+                      selectedRole === 'CONSUMER'
+                        ? 'border-primary-base bg-primary-tint text-primary-deep'
+                        : 'border-surface-input bg-white text-neutral-500 hover:border-neutral-400'
+                    }`}
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+                    </svg>
+                    Consumer
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedRole('PROVIDER')}
+                    className={`flex items-center justify-center gap-2 py-3 px-4 rounded-[14px] border-2 text-sm font-semibold transition-all ${
+                      selectedRole === 'PROVIDER'
+                        ? 'border-primary-base bg-primary-tint text-primary-deep'
+                        : 'border-surface-input bg-white text-neutral-500 hover:border-neutral-400'
+                    }`}
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M11.42 15.17l-1.862 1.862a1.5 1.5 0 01-2.121 0l-.85-.85a1.5 1.5 0 010-2.12l3.38-3.38a3 3 0 115.728-1.838 3 3 0 01-3.275 3.328z" />
+                    </svg>
+                    Provider
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* Submit button */}
             <Button
               type="submit"
               isLoading={isLoading}
-              disabled={isAdminMode ? !adminCode.trim() : (!email.trim() || !password)}
+              disabled={isAdminMode ? !adminCode.trim() : (!email.trim() || !password || !selectedRole)}
               className="w-full !bg-primary-base hover:!bg-primary-deep !text-neutral-0 !rounded-[14px] mt-2 disabled:!bg-surface-disabled disabled:!cursor-not-allowed"
             >
-              {isAdminMode ? 'Sign in as admin' : 'Log in'}
+              {isAdminMode ? 'Sign in as admin' : `Log in as ${selectedRole?.toLowerCase() || '...'}`}
             </Button>
 
             {/* Admin toggle */}

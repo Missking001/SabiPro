@@ -10,9 +10,10 @@ export const authOptions: NextAuthOptions = {
       credentials: {
         email: { label: 'Email', type: 'email' },
         password: { label: 'Password', type: 'password' },
+        role: { label: 'Role', type: 'text' },
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) return null;
+        if (!credentials?.email || !credentials?.password || !credentials?.role) return null;
 
         try {
           const res = await fetch(`${API_BASE}/api/auth/login`, {
@@ -21,6 +22,7 @@ export const authOptions: NextAuthOptions = {
             body: JSON.stringify({
               email: credentials.email,
               password: credentials.password,
+              role: credentials.role,
             }),
           });
 

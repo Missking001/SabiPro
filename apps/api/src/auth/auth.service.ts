@@ -88,6 +88,12 @@ export class AuthService {
       throw new UnauthorizedException('Your account has been suspended');
     }
 
+    if (dto.role && dto.role !== 'ADMIN' && user.role !== dto.role) {
+      throw new UnauthorizedException(
+        `No ${dto.role.toLowerCase()} account found with this email. Please select the correct account type or create a new account.`,
+      );
+    }
+
     const isPasswordValid = await bcrypt.compare(dto.password, user.password);
     if (!isPasswordValid) {
       await this.recordFailedAttempt(attemptKey, user);

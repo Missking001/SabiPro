@@ -40,10 +40,11 @@ export function useAuth() {
   const isProvider = user?.role === 'PROVIDER';
   const isAdmin = user?.role === 'ADMIN';
 
-  async function login(email: string, password: string) {
+  async function login(email: string, password: string, role?: string) {
     const result = await signIn('credentials', {
       email,
       password,
+      role,
       redirect: false,
     });
     return result;

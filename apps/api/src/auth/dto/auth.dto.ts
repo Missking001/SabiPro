@@ -35,6 +35,10 @@ export class LoginDto {
   @IsString()
   @IsNotEmpty()
   password: string;
+
+  @IsString()
+  @IsOptional()
+  role?: string;
 }
 
 export class VerifyEmailDto {
