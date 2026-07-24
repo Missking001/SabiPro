@@ -35,7 +35,9 @@ export default function ProviderProfilePage() {
   const [uploadingPortfolio, setUploadingPortfolio] = useState(false);
   const [uploadingDocument, setUploadingDocument] = useState<string | null>(null);
   const [idUploaded, setIdUploaded] = useState(false);
+  const [idDocUrl, setIdDocUrl] = useState<string | null>(null);
   const [credentialUploaded, setCredentialUploaded] = useState(false);
+  const [credentialDocUrl, setCredentialDocUrl] = useState<string | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [providerId, setProviderId] = useState('');
 
@@ -58,6 +60,8 @@ export default function ProviderProfilePage() {
           setIsAvailable(profile.isAvailable ?? true);
           setPortfolioUrls(profile.portfolioUrls || []);
           setDocumentUrls(profile.documentUrls || []);
+          if (profile.documentUrls?.length >= 1) { setIdDocUrl(profile.documentUrls[0]); setIdUploaded(true); }
+          if (profile.documentUrls?.length >= 2) { setCredentialDocUrl(profile.documentUrls[1]); setCredentialUploaded(true); }
           if (profile.priceRangeMin != null) setPriceRangeMin(String(profile.priceRangeMin / 100));
           if (profile.priceRangeMax != null) setPriceRangeMax(String(profile.priceRangeMax / 100));
         }
@@ -201,7 +205,7 @@ export default function ProviderProfilePage() {
     }
   }
 
-  async function handleDocUpload(file: File | undefined, docType: string, setUploaded: (v: boolean) => void, inputRef: React.RefObject<HTMLInputElement | null>) {
+  async function handleDocUpload(file: File | undefined, docType: string, setUploaded: (v: boolean) => void, setUrl: (v: string | null) => void, inputRef: React.RefObject<HTMLInputElement | null>) {
     if (!file) return;
 
     const validationError = validateFile(file, 5 * 1024 * 1024, 'Document', ALLOWED_DOC_TYPES);
@@ -220,6 +224,7 @@ export default function ProviderProfilePage() {
       if (url) {
         setDocumentUrls((prev) => [...prev, url]);
         setUploaded(true);
+        setUrl(url);
       }
       setSuccess(`${docType} uploaded`);
     } catch (err) {
@@ -464,16 +469,34 @@ export default function ProviderProfilePage() {
             <div className="space-y-3">
               {/* ID Upload */}
               <div className="flex items-center justify-between p-3 bg-[#FAFAF9] rounded-xl border border-surface-border">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-[#E6F1FB] flex items-center justify-center text-[#185FA5]">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 9h3.75M15 12h3.75M15 15h3.75M4.5 19.5h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5zm6-10.125a1.875 1.875 0 11-3.75 0 1.875 1.875 0 013.75 0zm1.294 6.336a6.721 6.721 0 01-3.17.789 6.721 6.721 0 01-3.168-.789 3.376 3.376 0 016.338 0z" />
-                    </svg>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-neutral-900">Government-issued ID</p>
+                <div className="flex items-center gap-3 min-w-0">
+                  {idDocUrl ? (
+                    idDocUrl.endsWith('.pdf') ? (
+                      <a href={idDocUrl} target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-lg bg-[#FCEBEB] flex items-center justify-center text-[#E24B4A] flex-shrink-0 hover:scale-105 transition-transform">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+                        </svg>
+                      </a>
+                    ) : (
+                      <a href={idDocUrl} target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-lg overflow-hidden flex-shrink-0 border border-surface-border hover:scale-105 transition-transform">
+                        <Image src={idDocUrl} alt="ID document" width={40} height={40} className="object-cover w-full h-full" />
+                      </a>
+                    )
+                  ) : (
+                    <div className="w-10 h-10 rounded-lg bg-[#E6F1FB] flex items-center justify-center text-[#185FA5] flex-shrink-0">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 9h3.75M15 12h3.75M15 15h3.75M4.5 19.5h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5zm6-10.125a1.875 1.875 0 11-3.75 0 1.875 1.875 0 013.75 0zm1.294 6.336a6.721 6.721 0 01-3.17.789 6.721 6.721 0 01-3.168-.789 3.376 3.376 0 016.338 0z" />
+                      </svg>
+                    </div>
+                  )}
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-neutral-900 truncate">Government-issued ID</p>
                     <p className="text-xs text-neutral-400">
-                      {idUploaded ? 'Uploaded' : 'Not yet uploaded'}
+                      {idDocUrl ? (
+                        <a href={idDocUrl} target="_blank" rel="noopener noreferrer" className="text-primary-base hover:underline">View document</a>
+                      ) : (
+                        'Not yet uploaded'
+                      )}
                     </p>
                   </div>
                 </div>
@@ -482,30 +505,48 @@ export default function ProviderProfilePage() {
                   type="file"
                   accept="image/jpeg,image/png,image/webp,application/pdf"
                   className="hidden"
-                  onChange={(e) => handleDocUpload(e.target.files?.[0], 'ID', setIdUploaded, idInputRef)}
+                  onChange={(e) => handleDocUpload(e.target.files?.[0], 'ID', setIdUploaded, setIdDocUrl, idInputRef)}
                 />
                 <button
                   type="button"
                   disabled={uploadingDocument === 'ID'}
                   onClick={() => idInputRef.current?.click()}
-                  className="text-xs font-semibold text-primary-base hover:text-primary-hover disabled:opacity-50"
+                  className="text-xs font-semibold text-primary-base hover:text-primary-hover disabled:opacity-50 flex-shrink-0"
                 >
-                  {uploadingDocument === 'ID' ? 'Uploading...' : 'Upload'}
+                  {uploadingDocument === 'ID' ? 'Uploading...' : 'Re-upload'}
                 </button>
               </div>
 
               {/* Credential Upload */}
               <div className="flex items-center justify-between p-3 bg-[#FAFAF9] rounded-xl border border-surface-border">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-[#EAF5EE] flex items-center justify-center text-[#1A6B3C]">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M4.26 10.147a60.438 60.438 0 0 0-.491 6.347A48.62 48.62 0 0 1 12 20.904a48.62 48.62 0 0 1 8.232-4.41 60.46 60.46 0 0 0-.491-6.347m-15.482 0a50.636 50.636 0 0 0-2.658-.813A59.906 59.906 0 0 1 12 3.493a59.903 59.903 0 0 1 10.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.717 50.717 0 0 1 12 13.489a50.702 50.702 0 0 1 7.74-3.342" />
-                    </svg>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-neutral-900">Trade certificate / Credential</p>
+                <div className="flex items-center gap-3 min-w-0">
+                  {credentialDocUrl ? (
+                    credentialDocUrl.endsWith('.pdf') ? (
+                      <a href={credentialDocUrl} target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-lg bg-[#FCEBEB] flex items-center justify-center text-[#E24B4A] flex-shrink-0 hover:scale-105 transition-transform">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+                        </svg>
+                      </a>
+                    ) : (
+                      <a href={credentialDocUrl} target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-lg overflow-hidden flex-shrink-0 border border-surface-border hover:scale-105 transition-transform">
+                        <Image src={credentialDocUrl} alt="Credential document" width={40} height={40} className="object-cover w-full h-full" />
+                      </a>
+                    )
+                  ) : (
+                    <div className="w-10 h-10 rounded-lg bg-[#EAF5EE] flex items-center justify-center text-[#1A6B3C] flex-shrink-0">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M4.26 10.147a60.438 60.438 0 0 0-.491 6.347A48.62 48.62 0 0 1 12 20.904a48.62 48.62 0 0 1 8.232-4.41 60.46 60.46 0 0 0-.491-6.347m-15.482 0a50.636 50.636 0 0 0-2.658-.813A59.906 59.906 0 0 1 12 3.493a59.903 59.903 0 0 1 10.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.717 50.717 0 0 1 12 13.489a50.702 50.702 0 0 1 7.74-3.342" />
+                      </svg>
+                    </div>
+                  )}
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-neutral-900 truncate">Trade certificate / Credential</p>
                     <p className="text-xs text-neutral-400">
-                      {credentialUploaded ? 'Uploaded' : 'Not yet uploaded'}
+                      {credentialDocUrl ? (
+                        <a href={credentialDocUrl} target="_blank" rel="noopener noreferrer" className="text-primary-base hover:underline">View document</a>
+                      ) : (
+                        'Not yet uploaded'
+                      )}
                     </p>
                   </div>
                 </div>
@@ -514,15 +555,15 @@ export default function ProviderProfilePage() {
                   type="file"
                   accept="image/jpeg,image/png,image/webp,application/pdf"
                   className="hidden"
-                  onChange={(e) => handleDocUpload(e.target.files?.[0], 'Credential', setCredentialUploaded, credentialInputRef)}
+                  onChange={(e) => handleDocUpload(e.target.files?.[0], 'Credential', setCredentialUploaded, setCredentialDocUrl, credentialInputRef)}
                 />
                 <button
                   type="button"
                   disabled={uploadingDocument === 'Credential'}
                   onClick={() => credentialInputRef.current?.click()}
-                  className="text-xs font-semibold text-primary-base hover:text-primary-hover disabled:opacity-50"
+                  className="text-xs font-semibold text-primary-base hover:text-primary-hover disabled:opacity-50 flex-shrink-0"
                 >
-                  {uploadingDocument === 'Credential' ? 'Uploading...' : 'Upload'}
+                  {uploadingDocument === 'Credential' ? 'Uploading...' : 'Re-upload'}
                 </button>
               </div>
             </div>
