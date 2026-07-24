@@ -226,6 +226,26 @@ export class ProvidersService {
     return provider; // null if user has no provider profile yet
   }
 
+  async switchToConsumer(userId: string) {
+    const provider = await this.prisma.provider.findUnique({ where: { userId } });
+    if (!provider) {
+      throw new NotFoundException('You do not have a provider profile');
+    }
+
+    await this.prisma.$transaction([
+      this.prisma.provider.update({
+        where: { userId },
+        data: { isAvailable: false },
+      }),
+      this.prisma.user.update({
+        where: { id: userId },
+        data: { role: Role.CONSUMER },
+      }),
+    ]);
+
+    return { message: 'Switched to consumer account' };
+  }
+
   async deactivate(id: string, userId: string, role: string) {
     const provider = await this.prisma.provider.findUnique({ where: { id } });
     if (!provider) {

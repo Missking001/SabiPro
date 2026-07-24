@@ -142,6 +142,8 @@ export const api = {
         method: 'PATCH',
         body: JSON.stringify(data),
       }),
+    switchToConsumer: () =>
+      request<{ message: string }>('/api/providers/switch-to-consumer', { method: 'POST' }),
   },
 
   reviews: {

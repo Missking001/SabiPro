@@ -59,6 +59,12 @@ export class ProvidersController {
     return this.providersService.update(id, user.userId, user.role, dto);
   }
 
+  @Post('switch-to-consumer')
+  @UseGuards(JwtAuthGuard)
+  async switchToConsumer(@CurrentUser() user: AuthenticatedUser) {
+    return this.providersService.switchToConsumer(user.userId);
+  }
+
   @Delete(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.PROVIDER, Role.ADMIN)

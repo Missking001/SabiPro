@@ -638,6 +638,26 @@ export default function ProviderProfilePage() {
           >
             Save changes
           </Button>
+
+          <div className="text-center pt-4 border-t border-surface-border">
+            <p className="text-caption text-neutral-400 mb-2">Want to use SabiPro as a consumer instead?</p>
+            <button
+              type="button"
+              onClick={async () => {
+                if (!confirm('Switch to consumer account? Your provider profile will be deactivated.')) return;
+                try {
+                  await api.providers.switchToConsumer();
+                  setSuccess('Switched to consumer account');
+                  setTimeout(() => router.push('/'), 2000);
+                } catch (err) {
+                  setError(err instanceof ApiClientError ? err.message : 'Failed to switch account');
+                }
+              }}
+              className="text-small text-neutral-500 hover:text-error-base font-medium transition-colors"
+            >
+              Switch to consumer
+            </button>
+          </div>
         </form>
       </div>
     </div>
