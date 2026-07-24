@@ -3,6 +3,7 @@ import {
   NotFoundException,
   ConflictException,
   ForbiddenException,
+  BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateProviderDto, UpdateProviderDto, SearchProvidersDto } from './dto/providers.dto';
@@ -227,23 +228,23 @@ export class ProvidersService {
   }
 
   async switchToConsumer(userId: string) {
-    const provider = await this.prisma.provider.findUnique({ where: { userId } });
-    if (!provider) {
-      throw new NotFoundException('You do not have a provider profile');
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { role: true },
+    });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    if (user.role !== Role.PROVIDER) {
+      throw new BadRequestException('Only providers can switch to consumer');
     }
 
-    await this.prisma.$transaction([
-      this.prisma.provider.update({
-        where: { userId },
-        data: { isAvailable: false },
-      }),
-      this.prisma.user.update({
-        where: { id: userId },
-        data: { role: Role.CONSUMER },
-      }),
-    ]);
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { role: Role.CONSUMER },
+    });
 
-    return { message: 'Switched to consumer account' };
+    return { message: 'Switched to consumer account. Your provider profile remains active.' };
   }
 
   async deactivate(id: string, userId: string, role: string) {

@@ -644,7 +644,7 @@ export default function ProviderProfilePage() {
             <button
               type="button"
               onClick={async () => {
-                if (!confirm('Switch to consumer account? Your provider profile will be deactivated.')) return;
+                if (!confirm('Switch to consumer account? You can switch back anytime.')) return;
                 try {
                   await api.providers.switchToConsumer();
                   setSuccess('Switched to consumer account');
