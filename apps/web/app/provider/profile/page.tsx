@@ -104,6 +104,7 @@ export default function ProviderProfilePage() {
         });
         if (updatedRes.data) setProvider(updatedRes.data);
         setSuccess('Profile updated successfully');
+        setTimeout(() => router.push('/provider/dashboard'), 2000);
       } else {
         const res = await api.providers.create({
           bio,
