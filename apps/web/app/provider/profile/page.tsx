@@ -10,6 +10,7 @@ import { getInitials } from '@/lib/utils';
 import type { MyProviderProfile } from '@/types';
 
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+const ALLOWED_DOC_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
 const MAX_AVATAR_SIZE = 1 * 1024 * 1024;
 const MAX_PORTFOLIO_SIZE = 2 * 1024 * 1024;
 const MAX_PORTFOLIO_COUNT = 6;
@@ -116,9 +117,10 @@ export default function ProviderProfilePage() {
     }
   }
 
-  function validateFile(file: File, maxSize: number, label: string): string | null {
-    if (!ALLOWED_TYPES.includes(file.type)) {
-      return `${label} must be JPG, PNG, or WebP`;
+  function validateFile(file: File, maxSize: number, label: string, allowedTypes: string[] = ALLOWED_TYPES): string | null {
+    if (!allowedTypes.includes(file.type)) {
+      const formats = allowedTypes.map((t) => t.split('/')[1].toUpperCase()).join(', ');
+      return `${label} must be ${formats}`;
     }
     if (file.size > maxSize) {
       const mb = maxSize / (1024 * 1024);
@@ -202,7 +204,7 @@ export default function ProviderProfilePage() {
   async function handleDocUpload(file: File | undefined, docType: string, setUploaded: (v: boolean) => void, inputRef: React.RefObject<HTMLInputElement | null>) {
     if (!file) return;
 
-    const validationError = validateFile(file, 5 * 1024 * 1024, 'Document');
+    const validationError = validateFile(file, 5 * 1024 * 1024, 'Document', ALLOWED_DOC_TYPES);
     if (validationError) {
       setError(validationError);
       return;
