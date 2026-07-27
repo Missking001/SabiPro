@@ -7,6 +7,36 @@ import { api } from '@/lib/api';
 import { formatNaira, formatDate } from '@/lib/utils';
 import type { Transaction } from '@/types';
 
+const NIGERIAN_BANKS = [
+  { code: '044', name: 'Access Bank' },
+  { code: '063', name: 'Diamond Bank' },
+  { code: '050', name: 'Ecobank Nigeria' },
+  { code: '045', name: 'Equitorial Trust Bank' },
+  { code: '011', name: 'First Bank of Nigeria' },
+  { code: '214', name: 'First City Monument Bank' },
+  { code: '070', name: 'Fidelity Bank' },
+  { code: '058', name: 'Guaranty Trust Bank' },
+  { code: '030', name: 'Heritage Bank' },
+  { code: '032', name: 'Idle Saleh Investment Bank' },
+  { code: '076', name: 'Impact Bank' },
+  { code: '069', name: 'Keystone Bank' },
+  { code: '076', name: 'Kuda Bank' },
+  { code: '526', name: 'Jaiz Bank' },
+  { code: '090', name: 'Lotus Bank' },
+  { code: '082', name: 'Polaris Bank' },
+  { code: '100', name: 'Phoenix Bank' },
+  { code: '068', name: 'Standard Chartered Bank' },
+  { code: '039', name: 'Stanbic IBTC Bank' },
+  { code: '033', name: 'Sterling Bank' },
+  { code: '100', name: 'SunTrust Bank' },
+  { code: '032', name: 'Titan Trust Bank' },
+  { code: '900', name: 'Union Bank' },
+  { code: '035', name: 'United Bank for Africa' },
+  { code: '026', name: 'Unity Bank' },
+  { code: '057', name: 'Wema Bank' },
+  { code: '054', name: 'Zenith Bank' },
+];
+
 export default function ProviderEarningsPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -15,6 +45,7 @@ export default function ProviderEarningsPage() {
   // Bank details form state
   const [showBankModal, setShowBankModal] = useState(false);
   const [bankCode, setBankCode] = useState('');
+  const [bankName, setBankName] = useState('');
   const [accountNumber, setAccountNumber] = useState('');
   const [isSubmittingDetails, setIsSubmittingDetails] = useState(false);
   const [detailsSuccess, setDetailsSuccess] = useState('');
@@ -35,15 +66,16 @@ export default function ProviderEarningsPage() {
 
   async function handleUpdateBankDetails(e: React.FormEvent) {
     e.preventDefault();
-    if (!bankCode || !accountNumber) return;
+    if (!bankCode || !bankName || !accountNumber) return;
     setIsSubmittingDetails(true);
     setDetailsSuccess('');
     setError('');
 
     try {
-      await api.payouts.submitDetails({ bankCode, accountNumber });
+      await api.payouts.submitDetails({ bankCode, bankName, accountNumber });
       setDetailsSuccess('Bank payout details updated successfully!');
       setBankCode('');
+      setBankName('');
       setAccountNumber('');
       setShowBankModal(false);
     } catch (err: any) {
@@ -135,13 +167,26 @@ export default function ProviderEarningsPage() {
           <Card className="border border-primary-base bg-white">
             <h3 className="text-small font-semibold text-neutral-900 mb-2">Configure Payout Bank Account</h3>
             <form onSubmit={handleUpdateBankDetails} className="space-y-3">
-              <Input
-                label="Bank Code"
-                placeholder="e.g. 044 (Access Bank), 058 (GTB)"
-                value={bankCode}
-                onChange={(e) => setBankCode(e.target.value)}
-                required
-              />
+              <div>
+                <label className="block text-small font-medium text-neutral-700 mb-1">Bank Name</label>
+                <select
+                  value={bankCode}
+                  onChange={(e) => {
+                    const selected = NIGERIAN_BANKS.find((b) => b.code === e.target.value);
+                    setBankCode(selected?.code || '');
+                    setBankName(selected?.name || '');
+                  }}
+                  required
+                  className="w-full px-3 py-2.5 text-small border border-surface-input rounded-component bg-white focus:outline-none focus:ring-2 focus:ring-primary-base/30 focus:border-primary-base"
+                >
+                  <option value="">Select your bank</option>
+                  {NIGERIAN_BANKS.map((bank) => (
+                    <option key={`${bank.code}-${bank.name}`} value={bank.code}>
+                      {bank.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
               <Input
                 label="Account Number"
                 placeholder="10-digit NUBAN number"

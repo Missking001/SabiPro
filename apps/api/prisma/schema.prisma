@@ -59,6 +59,7 @@ model Provider {
   isAvailable     Boolean         @default(true)
   onboardingState OnboardingState @default(REGISTERED)
   bankCode        String?
+  bankName        String?
   accountNumber   String?
   averageRating   Float           @default(0.0)
   totalReviews    Int             @default(0)
@@ -238,6 +239,7 @@ model Payout {
   platformFee   Int
   status        PayoutState  @default(PENDING)
   bankCode      String
+  bankName      String
   accountNumber String
   gatewayRef    String?
   processedAt   DateTime?

@@ -18,16 +18,17 @@ export class PaymentsService {
 
   constructor(private readonly prisma: PrismaService) {}
 
-  async saveBankDetails(userId: string, dto: { bankCode: string; accountNumber: string }) {
+  async saveBankDetails(userId: string, dto: { bankCode: string; bankName: string; accountNumber: string }) {
     const provider = await this.prisma.provider.findUnique({ where: { userId } });
     if (!provider) throw new NotFoundException('Provider profile not found');
 
     const encryptedBankCode = encrypt(dto.bankCode);
+    const encryptedBankName = encrypt(dto.bankName);
     const encryptedAccountNumber = encrypt(dto.accountNumber);
 
     await this.prisma.provider.update({
       where: { userId },
-      data: { bankCode: encryptedBankCode, accountNumber: encryptedAccountNumber },
+      data: { bankCode: encryptedBankCode, bankName: encryptedBankName, accountNumber: encryptedAccountNumber },
     });
 
     return { message: 'Bank details saved successfully' };
@@ -36,16 +37,17 @@ export class PaymentsService {
   async getBankDetails(userId: string) {
     const provider = await this.prisma.provider.findUnique({
       where: { userId },
-      select: { bankCode: true, accountNumber: true },
+      select: { bankCode: true, bankName: true, accountNumber: true },
     });
     if (!provider) throw new NotFoundException('Provider profile not found');
 
-    if (!provider.bankCode || !provider.accountNumber) {
-      return { bankCode: null, accountNumber: null };
+    if (!provider.bankCode || !provider.bankName || !provider.accountNumber) {
+      return { bankCode: null, bankName: null, accountNumber: null };
     }
 
     return {
       bankCode: decrypt(provider.bankCode),
+      bankName: decrypt(provider.bankName),
       accountNumber: maskAccountNumber(decrypt(provider.accountNumber)),
     };
   }
@@ -506,16 +508,17 @@ export class PaymentsService {
 
     const provider = await this.prisma.provider.findUnique({
       where: { id: transaction.providerId },
-      select: { userId: true, bankCode: true, accountNumber: true },
+      select: { userId: true, bankCode: true, bankName: true, accountNumber: true },
     });
     if (!provider) {
       throw new NotFoundException('Provider not found');
     }
-    if (!provider.bankCode || !provider.accountNumber) {
+    if (!provider.bankCode || !provider.bankName || !provider.accountNumber) {
       throw new BadRequestException('Provider has not set up their bank details yet');
     }
 
     const decryptedBankCode = decrypt(provider.bankCode);
+    const decryptedBankName = decrypt(provider.bankName);
     const decryptedAccountNumber = decrypt(provider.accountNumber);
 
     const platformFeePercent = parseInt(process.env.PLATFORM_FEE_PERCENT || '10', 10);
@@ -539,6 +542,7 @@ export class PaymentsService {
           platformFee,
           status: PayoutState.COMPLETED,
           bankCode: decryptedBankCode,
+          bankName: decryptedBankName,
           accountNumber: decryptedAccountNumber,
           processedAt: new Date(),
         },
@@ -680,14 +684,15 @@ export class PaymentsService {
       try {
         const provider = await this.prisma.provider.findUnique({
           where: { id: tx.providerId },
-          select: { userId: true, bankCode: true, accountNumber: true },
+          select: { userId: true, bankCode: true, bankName: true, accountNumber: true },
         });
-        if (!provider || !provider.bankCode || !provider.accountNumber) {
+        if (!provider || !provider.bankCode || !provider.bankName || !provider.accountNumber) {
           this.logger.warn(`Skipping auto-release for ${tx.id}: provider missing bank details`);
           continue;
         }
 
         const decryptedBankCode = decrypt(provider.bankCode);
+        const decryptedBankName = decrypt(provider.bankName);
         const decryptedAccountNumber = decrypt(provider.accountNumber);
 
         const platformFeePercent = parseInt(process.env.PLATFORM_FEE_PERCENT || '10', 10);
@@ -711,6 +716,7 @@ export class PaymentsService {
               platformFee,
               status: PayoutState.COMPLETED,
               bankCode: decryptedBankCode,
+              bankName: decryptedBankName,
               accountNumber: decryptedAccountNumber,
               processedAt: new Date(),
             },

@@ -7,6 +7,10 @@ export class ProviderBankDetailsDto {
 
   @IsString()
   @IsNotEmpty()
+  bankName: string;
+
+  @IsString()
+  @IsNotEmpty()
   accountNumber: string;
 }
 

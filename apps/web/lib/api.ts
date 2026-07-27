@@ -259,7 +259,7 @@ export const api = {
   },
 
   payouts: {
-    submitDetails: (data: { bankCode: string; accountNumber: string }) =>
+    submitDetails: (data: { bankCode: string; bankName: string; accountNumber: string }) =>
       request<{ message: string }>('/api/payouts/provider-details', {
         method: 'POST',
         body: JSON.stringify(data),
