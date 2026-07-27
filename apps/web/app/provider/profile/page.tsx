@@ -38,6 +38,7 @@ export default function ProviderProfilePage() {
 
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isFetching, setIsFetching] = useState(true);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
@@ -71,8 +72,8 @@ export default function ProviderProfilePage() {
           setDocumentUrls(profile.documentUrls || []);
           if (profile.documentUrls?.length >= 1) { setIdDocUrl(profile.documentUrls[0]); setIdUploaded(true); }
           if (profile.documentUrls?.length >= 2) { setCredentialDocUrl(profile.documentUrls[1]); setCredentialUploaded(true); }
-          if (profile.priceRangeMin != null) setPriceRangeMin(String(profile.priceRangeMin / 100));
-          if (profile.priceRangeMax != null) setPriceRangeMax(String(profile.priceRangeMax / 100));
+          if (profile.priceRangeMin != null) setPriceRangeMin(formatComma(String(profile.priceRangeMin / 100)));
+          if (profile.priceRangeMax != null) setPriceRangeMax(formatComma(String(profile.priceRangeMax / 100)));
         }
       } catch {
       } finally {
@@ -104,7 +105,7 @@ export default function ProviderProfilePage() {
           documentUrls,
         });
         if (updatedRes.data) setProvider(updatedRes.data);
-        setSuccess('Profile updated successfully');
+        setShowSuccessModal(true);
         setTimeout(() => router.push('/provider/dashboard'), 2000);
       } else {
         const res = await api.providers.create({
@@ -117,7 +118,7 @@ export default function ProviderProfilePage() {
           documentUrls,
         });
         setProviderId(res.data?.id || '');
-        setSuccess('Profile created successfully');
+        setShowSuccessModal(true);
         setTimeout(() => router.push('/provider/dashboard'), 2000);
       }
     } catch (err) {
@@ -232,7 +233,17 @@ export default function ProviderProfilePage() {
       const res = await api.uploads.document(file);
       const url = res.data && res.data.url;
       if (url) {
-        setDocumentUrls((prev) => [...prev, url]);
+        const docIndex = docType === 'ID' ? 0 : 1;
+        setDocumentUrls((prev) => {
+          const updated = [...prev];
+          if (updated.length > docIndex) {
+            updated[docIndex] = url;
+          } else {
+            while (updated.length < docIndex) updated.push('');
+            updated.push(url);
+          }
+          return updated;
+        });
         setUploaded(true);
         setUrl(url);
       }
@@ -283,6 +294,21 @@ export default function ProviderProfilePage() {
 
         {error && <StatusBanner variant="error">{error}</StatusBanner>}
         {success && <StatusBanner variant="success">{success}</StatusBanner>}
+
+        {/* Success Modal */}
+        {showSuccessModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+            <div className="bg-white rounded-card p-8 shadow-xl max-w-sm mx-4 text-center space-y-4 animate-in fade-in zoom-in-95 duration-200">
+              <div className="w-16 h-16 mx-auto rounded-full bg-[#EAF5EE] flex items-center justify-center">
+                <svg className="w-9 h-9 text-[#1A6B3C]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-semibold text-neutral-900">Profile updated successfully</h3>
+              <p className="text-sm text-neutral-500">Redirecting you to your dashboard...</p>
+            </div>
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Profile Photo Card */}
