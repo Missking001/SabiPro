@@ -1,4 +1,4 @@
-import { IsString, IsEmail, IsNotEmpty, MinLength, IsOptional, IsEnum } from 'class-validator';
+import { IsString, IsEmail, IsNotEmpty, MinLength, IsOptional, IsIn } from 'class-validator';
 
 export class RegisterDto {
   @IsString()
@@ -14,8 +14,8 @@ export class RegisterDto {
   @MinLength(8)
   password: string;
 
-  @IsString()
   @IsOptional()
+  @IsIn(['CONSUMER', 'PROVIDER'], { message: 'Role must be CONSUMER or PROVIDER' })
   role?: string;
 
   @IsString()
@@ -74,4 +74,25 @@ export class AdminRegisterDto {
   @IsString()
   @IsNotEmpty()
   code: string;
+}
+
+export class UpdateProfileDto {
+  @IsString()
+  @IsOptional()
+  name?: string;
+
+  @IsString()
+  @IsOptional()
+  phone?: string;
+}
+
+export class ChangePasswordDto {
+  @IsString()
+  @IsNotEmpty()
+  currentPassword: string;
+
+  @IsString()
+  @IsNotEmpty()
+  @MinLength(8)
+  newPassword: string;
 }

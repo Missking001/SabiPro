@@ -9,7 +9,12 @@ import { JwtStrategy } from './strategies/jwt.strategy';
   imports: [
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.register({
-      secret: process.env.JWT_SECRET || 'fallback-secret-do-not-use',
+      secret: (() => {
+        if (!process.env.JWT_SECRET) {
+          throw new Error('JWT_SECRET environment variable is required');
+        }
+        return process.env.JWT_SECRET;
+      })(),
       signOptions: { expiresIn: '7d' },
     }),
   ],

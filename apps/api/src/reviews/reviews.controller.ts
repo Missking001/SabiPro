@@ -40,7 +40,8 @@ export class ReviewsController {
   }
 
   @Post(':id/flag')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.CONSUMER, Role.PROVIDER)
   async flag(
     @Param('id') id: string,
     @Body() dto: FlagReviewDto,

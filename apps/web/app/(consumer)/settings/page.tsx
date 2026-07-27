@@ -17,7 +17,7 @@ export default function SettingsPage() {
 
   // Profile form state
   const [name, setName] = useState(user?.name || '');
-  const [phone, setPhone] = useState('');
+  const [phone, setPhone] = useState((user as any)?.phone || '');
 
   // Security form state
   const [currentPw, setCurrentPw] = useState('');
@@ -29,8 +29,7 @@ export default function SettingsPage() {
     setSaving(true);
     setFeedback(null);
     try {
-      // In a full implementation this would call an update profile endpoint
-      await new Promise((res) => setTimeout(res, 800));
+      await api.auth.updateProfile({ name: name.trim(), phone: phone.trim() });
       setFeedback({ type: 'success', msg: 'Profile updated successfully' });
     } catch (err) {
       setFeedback({ type: 'error', msg: err instanceof ApiClientError ? err.message : 'Something went wrong. Please try again later' });
@@ -52,11 +51,11 @@ export default function SettingsPage() {
     setSaving(true);
     setFeedback(null);
     try {
-      await new Promise((res) => setTimeout(res, 800));
+      await api.auth.changePassword({ currentPassword: currentPw, newPassword: newPw });
       setFeedback({ type: 'success', msg: 'Password changed successfully' });
       setCurrentPw(''); setNewPw(''); setConfirmPw('');
     } catch (err) {
-      setFeedback({ type: 'error', msg: 'Something went wrong. Please try again later' });
+      setFeedback({ type: 'error', msg: err instanceof ApiClientError ? err.message : 'Something went wrong. Please try again later' });
     } finally {
       setSaving(false);
     }

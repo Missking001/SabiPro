@@ -20,6 +20,10 @@ export class ReviewsService {
       throw new NotFoundException('Provider not found');
     }
 
+    if (provider.userId === consumerId) {
+      throw new ForbiddenException('You cannot review your own profile');
+    }
+
     const existing = await this.prisma.review.findUnique({
       where: { consumerId_providerId: { consumerId, providerId: dto.providerId } },
     });
@@ -75,7 +79,10 @@ export class ReviewsService {
     }
 
     await this.prisma.$transaction(async (tx) => {
-      await tx.review.delete({ where: { id } });
+      await tx.review.update({
+        where: { id },
+        data: { isVisible: false },
+      });
 
       const aggregation = await tx.review.aggregate({
         where: { providerId: review.providerId, isVisible: true },
@@ -99,6 +106,13 @@ export class ReviewsService {
     const review = await this.prisma.review.findUnique({ where: { id } });
     if (!review) {
       throw new NotFoundException('Review not found');
+    }
+
+    const existingFlag = await this.prisma.contentFlag.findFirst({
+      where: { reportedBy: userId, targetId: id },
+    });
+    if (existingFlag) {
+      throw new ConflictException('You have already flagged this review');
     }
 
     await this.prisma.contentFlag.create({

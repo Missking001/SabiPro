@@ -2,10 +2,11 @@ import {
   Injectable,
   NotFoundException,
   ConflictException,
+  BadRequestException,
   Logger,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { BadgeType, OnboardingState, FlagStatus, FlagTarget } from '@prisma/client';
+import { BadgeType, OnboardingState, FlagStatus, FlagTarget, NotificationType } from '@prisma/client';
 
 @Injectable()
 export class AdminService {
@@ -14,6 +15,10 @@ export class AdminService {
   constructor(private readonly prisma: PrismaService) {}
 
   async approveVetting(providerId: string, badgeType: string, adminId: string) {
+    if (!Object.values(BadgeType).includes(badgeType as BadgeType)) {
+      throw new BadRequestException(`Invalid badge type. Must be one of: ${Object.values(BadgeType).join(', ')}`);
+    }
+
     const provider = await this.prisma.provider.findUnique({
       where: { id: providerId },
       include: { vettingBadge: true },
@@ -23,6 +28,9 @@ export class AdminService {
     }
     if (provider.vettingBadge) {
       throw new ConflictException('Provider already has a vetting badge');
+    }
+    if (provider.onboardingState !== OnboardingState.ACTIVE) {
+      throw new BadRequestException('Provider must be in ACTIVE state before verification');
     }
 
     const badge = await this.prisma.$transaction(async (tx) => {
@@ -45,7 +53,7 @@ export class AdminService {
       await tx.notification.create({
         data: {
           userId: provider.userId,
-          type: 'BADGE_ISSUED',
+          type: NotificationType.BADGE_ISSUED,
           message: 'Congratulations! Your profile has been verified and a vetting badge has been issued.',
           relatedId: providerId,
           relatedType: 'Provider',
@@ -91,7 +99,7 @@ export class AdminService {
         await tx.notification.create({
           data: {
             userId: provider.userId,
-            type: 'BADGE_REVOKED',
+            type: NotificationType.BADGE_REVOKED,
             message: 'Your vetting badge has been revoked. Your profile is still active.',
             relatedId: providerId,
             relatedType: 'Provider',
@@ -103,17 +111,29 @@ export class AdminService {
     return { message: 'Vetting badge revoked' };
   }
 
-  async getFlags() {
-    return this.prisma.contentFlag.findMany({
-      where: { status: FlagStatus.PENDING },
-      orderBy: { createdAt: 'desc' },
-      include: {
-        reporter: { select: { name: true, email: true } },
-      },
-    });
+  async getFlags(page = 1, pageSize = 20) {
+    const skip = (page - 1) * pageSize;
+    const [data, total] = await Promise.all([
+      this.prisma.contentFlag.findMany({
+        where: { status: FlagStatus.PENDING },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: pageSize,
+        include: {
+          reporter: { select: { name: true, email: true } },
+        },
+      }),
+      this.prisma.contentFlag.count({ where: { status: FlagStatus.PENDING } }),
+    ]);
+    return { data, meta: { page, pageSize, total } };
   }
 
   async resolveFlag(flagId: string, action: string, adminId: string) {
+    const allowedActions = ['REMOVE', 'DISMISS'];
+    if (!allowedActions.includes(action)) {
+      throw new BadRequestException(`Invalid action. Must be one of: ${allowedActions.join(', ')}`);
+    }
+
     const flag = await this.prisma.contentFlag.findUnique({
       where: { id: flagId },
     });
@@ -163,7 +183,7 @@ export class AdminService {
     await this.prisma.notification.create({
       data: {
         userId,
-        type: 'ACCOUNT_SUSPENDED',
+        type: NotificationType.ACCOUNT_SUSPENDED,
         message: 'Your account has been suspended. Please contact support for more information.',
         relatedId: userId,
         relatedType: 'User',
@@ -174,59 +194,80 @@ export class AdminService {
     return { message: 'User suspended' };
   }
 
-  async getUsers() {
-    return this.prisma.user.findMany({
-      orderBy: { createdAt: 'desc' },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-        isActive: true,
-        createdAt: true,
-      },
-    });
+  async getUsers(page = 1, pageSize = 20) {
+    const skip = (page - 1) * pageSize;
+    const [data, total] = await Promise.all([
+      this.prisma.user.findMany({
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: pageSize,
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+          isActive: true,
+          createdAt: true,
+        },
+      }),
+      this.prisma.user.count(),
+    ]);
+    return { data, meta: { page, pageSize, total } };
   }
 
-  async getTransactions() {
-    return this.prisma.transaction.findMany({
-      orderBy: { createdAt: 'desc' },
-      include: {
-        consumer: { select: { name: true } },
-        provider: {
-          select: {
-            tradeCategory: true,
-            slug: true,
-            user: { select: { name: true } },
+  async getTransactions(page = 1, pageSize = 20) {
+    const skip = (page - 1) * pageSize;
+    const [data, total] = await Promise.all([
+      this.prisma.transaction.findMany({
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: pageSize,
+        include: {
+          consumer: { select: { name: true } },
+          provider: {
+            select: {
+              tradeCategory: true,
+              slug: true,
+              user: { select: { name: true } },
+            },
           },
         },
-      },
-    });
+      }),
+      this.prisma.transaction.count(),
+    ]);
+    return { data, meta: { page, pageSize, total } };
   }
 
-  async getProviders() {
-    return this.prisma.provider.findMany({
-      orderBy: { createdAt: 'desc' },
-      select: {
-        id: true,
-        slug: true,
-        tradeCategory: true,
-        location: true,
-        bio: true,
-        portfolioUrls: true,
-        documentUrls: true,
-        priceRangeMin: true,
-        priceRangeMax: true,
-        averageRating: true,
-        totalReviews: true,
-        isAvailable: true,
-        isVerified: true,
-        onboardingState: true,
-        createdAt: true,
-        user: { select: { name: true, avatarUrl: true } },
-        vettingBadge: { select: { badgeType: true, isActive: true } },
-      },
-    });
+  async getProviders(page = 1, pageSize = 20) {
+    const skip = (page - 1) * pageSize;
+    const [data, total] = await Promise.all([
+      this.prisma.provider.findMany({
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: pageSize,
+        select: {
+          id: true,
+          slug: true,
+          tradeCategory: true,
+          location: true,
+          bio: true,
+          portfolioUrls: true,
+          documentUrls: true,
+          priceRangeMin: true,
+          priceRangeMax: true,
+          averageRating: true,
+          totalReviews: true,
+          isAvailable: true,
+          isVerified: true,
+          onboardingState: true,
+          createdAt: true,
+          user: { select: { name: true, avatarUrl: true } },
+          vettingBadge: { select: { badgeType: true, isActive: true } },
+        },
+      }),
+      this.prisma.provider.count(),
+    ]);
+    return { data, meta: { page, pageSize, total } };
   }
 
   async getDashboard() {
@@ -277,5 +318,47 @@ export class AdminService {
       pendingVetting,
       pendingFlags,
     };
+  }
+
+  async getChartData() {
+    const now = new Date();
+    const months: { label: string; start: Date; end: Date }[] = [];
+
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const start = new Date(d.getFullYear(), d.getMonth(), 1);
+      const end = new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59, 999);
+      const label = start.toLocaleDateString('en-GB', { month: 'short' });
+      months.push({ label, start, end });
+    }
+
+    const revenueData = await Promise.all(
+      months.map(async (m) => {
+        const result = await this.prisma.payout.aggregate({
+          _sum: { amount: true },
+          where: {
+            status: 'COMPLETED',
+            createdAt: { gte: m.start, lte: m.end },
+          },
+        });
+        return { month: m.label, revenue: result._sum.amount || 0 };
+      }),
+    );
+
+    const signupData = await Promise.all(
+      months.map(async (m) => {
+        const [consumers, providers] = await Promise.all([
+          this.prisma.user.count({
+            where: { role: 'CONSUMER', createdAt: { gte: m.start, lte: m.end } },
+          }),
+          this.prisma.user.count({
+            where: { role: 'PROVIDER', createdAt: { gte: m.start, lte: m.end } },
+          }),
+        ]);
+        return { month: m.label, consumers, providers };
+      }),
+    );
+
+    return { revenue: revenueData, signups: signupData };
   }
 }

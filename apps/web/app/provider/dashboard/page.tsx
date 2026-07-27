@@ -36,7 +36,7 @@ export default function ProviderDashboardPage() {
           setTransactions(txRes.value.data || []);
         }
         if (notifRes.status === 'fulfilled') {
-          setNotifications(notifRes.value.data || []);
+          setNotifications(notifRes.value.data?.data || []);
         }
       } catch (err: any) {
         setError(err.message || 'Failed to load dashboard data');

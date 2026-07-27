@@ -32,6 +32,8 @@ model User {
   notifications Notification[]
   transactions Transaction[]
   contentFlags ContentFlag[]
+
+  @@index([role])
 }
 
 enum Role {
@@ -68,6 +70,11 @@ model Provider {
   vettingBadge    VettingBadge?
   payouts         Payout[]
   transactions    Transaction[]
+
+  @@index([tradeCategory])
+  @@index([location])
+  @@index([onboardingState])
+  @@index([isAvailable])
 }
 
 enum OnboardingState {
@@ -107,6 +114,10 @@ model Inquiry {
   // Relations
   consumer    User          @relation(fields: [consumerId], references: [id], onDelete: Cascade)
   provider    Provider      @relation(fields: [providerId], references: [id], onDelete: Cascade)
+
+  @@index([consumerId, providerId])
+  @@index([providerId])
+  @@index([consumerId])
 }
 
 enum InquiryStatus {
@@ -148,6 +159,9 @@ model Notification {
 
   // Relations
   user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, isRead])
 }
 
 enum NotificationType {
@@ -192,6 +206,11 @@ model Transaction {
   consumer         User          @relation(fields: [consumerId], references: [id], onDelete: Cascade)
   provider         Provider      @relation(fields: [providerId], references: [id], onDelete: Cascade)
   payouts          Payout[]
+
+  @@index([consumerId])
+  @@index([providerId])
+  @@index([status])
+  @@index([payoutStatus])
 }
 
 enum TxStatus {
@@ -224,6 +243,9 @@ model Payout {
   // Relations
   provider      Provider     @relation(fields: [providerId], references: [id], onDelete: Cascade)
   transaction   Transaction  @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+
+  @@index([providerId])
+  @@index([transactionId])
 }
 
 enum PayoutState {
@@ -246,6 +268,10 @@ model ContentFlag {
 
   // Relations
   reporter    User       @relation(fields: [reportedBy], references: [id], onDelete: Cascade)
+
+  @@index([targetId])
+  @@index([status])
+  @@index([reportedBy, targetId])
 }
 
 enum FlagTarget {
@@ -268,5 +294,8 @@ model PaymentLog {
   status        String
   payload       Json
   createdAt     DateTime @default(now())
+
+  @@index([transactionId])
+  @@index([gatewayRef])
 }
 

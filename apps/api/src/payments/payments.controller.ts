@@ -6,7 +6,9 @@ import {
   Body,
   UseGuards,
   Headers,
+  Req,
 } from '@nestjs/common';
+import { Request } from 'express';
 import { Throttle } from '@nestjs/throttler';
 import { PaymentsService } from './payments.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -34,10 +36,11 @@ export class PaymentsController {
 
   @Post('webhook')
   async webhook(
+    @Req() req: Request & { rawBody?: Buffer },
     @Body() body: any,
     @Headers('flw-signature') signature: string,
   ) {
-    return this.paymentsService.handleWebhook(body, signature);
+    return this.paymentsService.handleWebhook(body, signature, req.rawBody);
   }
 
   @Get(':id')

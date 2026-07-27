@@ -8,44 +8,6 @@ import { useAuth } from '@/hooks/useAuth';
 import { useSidebar } from '@/components/admin/SidebarContext';
 import type { ContentFlag } from '@/types';
 
-/* ── Mock data matching the reference screenshot ── */
-const mockFlags = [
-  {
-    id: 'mock-flag-1',
-    reportedBy: 'anonymous',
-    targetId: 'target-1',
-    targetType: 'REVIEW' as const,
-    reason: 'Suspected fake review — generic language, no booking record',
-    status: 'PENDING' as const,
-    createdAt: '2025-07-02T10:00:00Z',
-    reporter: { name: 'Anonymous', email: '' },
-    _target: 'Emeka Okafor',
-  },
-  {
-    id: 'mock-flag-2',
-    reportedBy: 'tunde-b',
-    targetId: 'target-2',
-    targetType: 'INQUIRY' as const,
-    reason: 'Credentials listed do not match submitted documents',
-    status: 'PENDING' as const,
-    createdAt: '2025-07-01T10:00:00Z',
-    reporter: { name: 'Tunde B.', email: '' },
-    _target: 'Fast Fix Mechanics',
-    _typeLabel: 'Profile',
-  },
-  {
-    id: 'mock-flag-3',
-    reportedBy: 'kemi-a',
-    targetId: 'target-3',
-    targetType: 'REVIEW' as const,
-    reason: 'Offensive language in review response',
-    status: 'PENDING' as const,
-    createdAt: '2025-06-30T10:00:00Z',
-    reporter: { name: 'Kemi A.', email: '' },
-    _target: 'Adaeze Nwosu',
-  },
-];
-
 type FlagItem = ContentFlag & {
   _target?: string;
   _typeLabel?: string;
@@ -75,21 +37,15 @@ export default function AdminFlagsPage() {
   async function loadFlags() {
     try {
       const res = await api.admin.flags();
-      const live = res.data || [];
-      setFlags(live.length > 0 ? live : mockFlags);
-    } catch {
-      setFlags(mockFlags);
+      setFlags(res.data?.data || []);
+    } catch (err) {
+      setError(err instanceof ApiClientError ? err.message : 'Failed to load flagged content');
     } finally {
       setIsLoading(false);
     }
   }
 
   async function handleResolve(id: string, action: 'REMOVE' | 'DISMISS') {
-    if (id.startsWith('mock-')) {
-      setFlags((prev) => prev.filter((f) => f.id !== id));
-      setActionFeedback(`Flag ${action === 'REMOVE' ? 'removed' : 'dismissed'} successfully`);
-      return;
-    }
     setProcessingId(id);
     setActionFeedback('');
     try {

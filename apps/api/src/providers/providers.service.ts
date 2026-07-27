@@ -35,12 +35,15 @@ export class ProvidersService {
       where.averageRating = { gte: dto.minRating };
     }
     if (dto.search) {
-      where.OR = [
-        { tradeCategory: { contains: dto.search, mode: 'insensitive' } },
-        { location: { contains: dto.search, mode: 'insensitive' } },
-        { bio: { contains: dto.search, mode: 'insensitive' } },
-        { user: { name: { contains: dto.search, mode: 'insensitive' } } },
-      ];
+      const trimmedSearch = dto.search.trim();
+      if (trimmedSearch) {
+        where.OR = [
+          { tradeCategory: { contains: trimmedSearch, mode: 'insensitive' } },
+          { location: { contains: trimmedSearch, mode: 'insensitive' } },
+          { bio: { contains: trimmedSearch, mode: 'insensitive' } },
+          { user: { name: { contains: trimmedSearch, mode: 'insensitive' } } },
+        ];
+      }
     }
 
     const [providers, total] = await Promise.all([
@@ -63,7 +66,7 @@ export class ProvidersService {
           isAvailable: true,
           onboardingState: true,
           documentUrls: true,
-          user: { select: { name: true, avatarUrl: true } },
+        user: { select: { name: true, avatarUrl: true, isActive: true } },
           vettingBadge: { select: { badgeType: true, isActive: true } },
         },
       }),
@@ -95,7 +98,7 @@ export class ProvidersService {
         onboardingState: true,
         documentUrls: true,
         createdAt: true,
-        user: { select: { name: true, avatarUrl: true } },
+        user: { select: { name: true, avatarUrl: true, isActive: true } },
         vettingBadge: { select: { badgeType: true, isActive: true } },
         reviews: {
           where: { isVisible: true },
@@ -120,6 +123,14 @@ export class ProvidersService {
       throw new NotFoundException('This profile is no longer available');
     }
 
+    if (!provider.isAvailable) {
+      throw new NotFoundException('This profile is no longer available');
+    }
+
+    if (!provider.user?.isActive) {
+      throw new NotFoundException('This profile is no longer available');
+    }
+
     return provider;
   }
 
@@ -131,31 +142,35 @@ export class ProvidersService {
 
     const slug = this.generateSlug(dto.tradeCategory, dto.location, userId);
 
-    const provider = await this.prisma.provider.create({
-      data: {
-        userId,
-        slug,
-        bio: dto.bio,
-        tradeCategory: dto.tradeCategory.trim(),
-        location: dto.location.trim(),
-        priceRangeMin: dto.priceRangeMin,
-        priceRangeMax: dto.priceRangeMax,
-        portfolioUrls: dto.portfolioUrls ?? [],
-        documentUrls: dto.documentUrls ?? [],
-        onboardingState: OnboardingState.PROFILE_COMPLETE,
-      },
-      select: {
-        id: true,
-        slug: true,
-        tradeCategory: true,
-        location: true,
-        onboardingState: true,
-      },
-    });
+    const provider = await this.prisma.$transaction(async (tx) => {
+      const p = await tx.provider.create({
+        data: {
+          userId,
+          slug,
+          bio: dto.bio,
+          tradeCategory: dto.tradeCategory.trim(),
+          location: dto.location.trim(),
+          priceRangeMin: dto.priceRangeMin,
+          priceRangeMax: dto.priceRangeMax,
+          portfolioUrls: dto.portfolioUrls ?? [],
+          documentUrls: dto.documentUrls ?? [],
+          onboardingState: OnboardingState.PROFILE_COMPLETE,
+        },
+        select: {
+          id: true,
+          slug: true,
+          tradeCategory: true,
+          location: true,
+          onboardingState: true,
+        },
+      });
 
-    await this.prisma.user.update({
-      where: { id: userId },
-      data: { role: Role.PROVIDER },
+      await tx.user.update({
+        where: { id: userId },
+        data: { role: Role.PROVIDER },
+      });
+
+      return p;
     });
 
     return provider;
@@ -239,12 +254,22 @@ export class ProvidersService {
       throw new BadRequestException('Only providers can switch to consumer');
     }
 
-    await this.prisma.user.update({
-      where: { id: userId },
-      data: { role: Role.CONSUMER },
+    await this.prisma.$transaction(async (tx) => {
+      await tx.user.update({
+        where: { id: userId },
+        data: { role: Role.CONSUMER },
+      });
+
+      const provider = await tx.provider.findUnique({ where: { userId } });
+      if (provider) {
+        await tx.provider.update({
+          where: { userId },
+          data: { isAvailable: false },
+        });
+      }
     });
 
-    return { message: 'Switched to consumer account. Your provider profile remains active.' };
+    return { message: 'Switched to consumer account.' };
   }
 
   async deactivate(id: string, userId: string, role: string) {

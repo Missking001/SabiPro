@@ -6,12 +6,18 @@ import { NotificationType, Channel } from '@prisma/client';
 export class NotificationsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll(userId: string) {
-    return this.prisma.notification.findMany({
-      where: { userId },
-      orderBy: { createdAt: 'desc' },
-      take: 50,
-    });
+  async findAll(userId: string, page = 1, pageSize = 20) {
+    const skip = (page - 1) * pageSize;
+    const [data, total] = await Promise.all([
+      this.prisma.notification.findMany({
+        where: { userId },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: pageSize,
+      }),
+      this.prisma.notification.count({ where: { userId } }),
+    ]);
+    return { data, meta: { page, pageSize, total } };
   }
 
   async markAsRead(id: string, userId: string) {

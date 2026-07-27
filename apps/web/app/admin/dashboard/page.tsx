@@ -18,18 +18,28 @@ interface DashboardStats {
   pendingFlags: number;
 }
 
+interface ChartData {
+  revenue: { month: string; revenue: number }[];
+  signups: { month: string; consumers: number; providers: number }[];
+}
+
 export default function AdminDashboardPage() {
   const { user } = useAuth();
   const { toggle: toggleSidebar } = useSidebar();
   const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [chartData, setChartData] = useState<ChartData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
     async function load() {
       try {
-        const res = await api.admin.dashboard();
-        if (res.data) setStats(res.data);
+        const [statsRes, chartsRes] = await Promise.all([
+          api.admin.dashboard(),
+          api.admin.charts(),
+        ]);
+        if (statsRes.data) setStats(statsRes.data);
+        if (chartsRes.data) setChartData(chartsRes.data);
       } catch (err: any) {
         setError(err.message || 'Failed to load dashboard data');
       } finally {
@@ -43,12 +53,12 @@ export default function AdminDashboardPage() {
     day: 'numeric', month: 'long', year: 'numeric',
   });
 
-  const totalUsersVal = stats?.totalUsers ?? 12847;
-  const activeProvidersVal = stats?.activeProviders ?? 3421;
-  const activeBookingsVal = stats?.totalInquiries ?? 847;
-  const revenueDisplay = stats?.platformRevenue ? `₦${(stats.platformRevenue / 100000000).toFixed(1)}M` : '₦4.2M';
-  const pendingVettingVal = stats?.pendingVetting ?? 23;
-  const pendingFlagsVal = stats?.pendingFlags ?? 7;
+  const totalUsersVal = stats?.totalUsers ?? 0;
+  const activeProvidersVal = stats?.activeProviders ?? 0;
+  const activeBookingsVal = stats?.totalInquiries ?? 0;
+  const revenueDisplay = stats?.platformRevenue ? `₦${(stats.platformRevenue / 100).toLocaleString('en-NG')}` : '₦0';
+  const pendingVettingVal = stats?.pendingVetting ?? 0;
+  const pendingFlagsVal = stats?.pendingFlags ?? 0;
 
   if (isLoading) {
     return (
@@ -160,7 +170,6 @@ export default function AdminDashboardPage() {
               </p>
               <p className="text-xs text-[#71717A] mt-1.5 font-medium">Total Users</p>
             </div>
-            <span className="text-xs font-semibold text-[#16A34A]">+8%</span>
           </div>
         </div>
 
@@ -178,7 +187,6 @@ export default function AdminDashboardPage() {
               </p>
               <p className="text-xs text-[#71717A] mt-1.5 font-medium">Total Providers</p>
             </div>
-            <span className="text-xs font-semibold text-[#16A34A]">+12%</span>
           </div>
         </div>
 
@@ -196,7 +204,6 @@ export default function AdminDashboardPage() {
               </p>
               <p className="text-xs text-[#71717A] mt-1.5 font-medium">Active Bookings</p>
             </div>
-            <span className="text-xs font-semibold text-[#16A34A]">+3%</span>
           </div>
         </div>
 
@@ -212,7 +219,6 @@ export default function AdminDashboardPage() {
               </p>
               <p className="text-xs text-[#71717A] mt-1.5 font-medium">Monthly Revenue</p>
             </div>
-            <span className="text-xs font-semibold text-[#16A34A]">+18%</span>
           </div>
         </div>
 
@@ -252,48 +258,48 @@ export default function AdminDashboardPage() {
         {/* Monthly Revenue Chart */}
         <div className="bg-white rounded-2xl p-6 border border-[#E5E7EB] shadow-xs flex flex-col justify-between w-full">
           <h2 className="text-sm font-semibold text-[#18181B] mb-4">
-            Monthly Revenue (₦M)
+            Monthly Revenue (₦)
           </h2>
           <div className="h-60 w-full pt-2">
-            <svg className="w-full h-full" viewBox="0 0 450 180" preserveAspectRatio="none">
-              {/* Horizontal Gridlines */}
-              <line x1="30" y1="20" x2="440" y2="20" stroke="#F1F5F9" strokeDasharray="3 3" strokeWidth="1" />
-              <text x="15" y="24" fill="#94A3B8" fontSize="11" textAnchor="end">6</text>
-
-              <line x1="30" y1="65" x2="440" y2="65" stroke="#F1F5F9" strokeDasharray="3 3" strokeWidth="1" />
-              <text x="15" y="69" fill="#94A3B8" fontSize="11" textAnchor="end">4</text>
-
-              <line x1="30" y1="110" x2="440" y2="110" stroke="#F1F5F9" strokeDasharray="3 3" strokeWidth="1" />
-              <text x="15" y="114" fill="#94A3B8" fontSize="11" textAnchor="end">2</text>
-
-              <line x1="30" y1="155" x2="440" y2="155" stroke="#F1F5F9" strokeDasharray="3 3" strokeWidth="1" />
-              <text x="15" y="159" fill="#94A3B8" fontSize="11" textAnchor="end">0</text>
-
-              {/* Month Labels */}
-              <text x="50" y="175" fill="#94A3B8" fontSize="11" textAnchor="middle">Feb</text>
-              <text x="125" y="175" fill="#94A3B8" fontSize="11" textAnchor="middle">Mar</text>
-              <text x="200" y="175" fill="#94A3B8" fontSize="11" textAnchor="middle">Apr</text>
-              <text x="275" y="175" fill="#94A3B8" fontSize="11" textAnchor="middle">May</text>
-              <text x="350" y="175" fill="#94A3B8" fontSize="11" textAnchor="middle">Jun</text>
-              <text x="425" y="175" fill="#94A3B8" fontSize="11" textAnchor="middle">Jul</text>
-
-              {/* Smooth Green Curve Line */}
-              <path
-                d="M 50 110 C 85 95, 90 92, 125 90 C 160 88, 165 80, 200 78 C 235 76, 240 68, 275 66 C 310 64, 315 58, 350 56 C 385 54, 390 50, 425 48"
-                fill="none"
-                stroke="#1A6B3C"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-              />
-
-              {/* Markers at month points */}
-              <circle cx="50" cy="110" r="4" fill="#1A6B3C" stroke="#FFFFFF" strokeWidth="2" />
-              <circle cx="125" cy="90" r="4" fill="#1A6B3C" stroke="#FFFFFF" strokeWidth="2" />
-              <circle cx="200" cy="78" r="4" fill="#1A6B3C" stroke="#FFFFFF" strokeWidth="2" />
-              <circle cx="275" cy="66" r="4" fill="#1A6B3C" stroke="#FFFFFF" strokeWidth="2" />
-              <circle cx="350" cy="56" r="4" fill="#1A6B3C" stroke="#FFFFFF" strokeWidth="2" />
-              <circle cx="425" cy="48" r="4" fill="#1A6B3C" stroke="#FFFFFF" strokeWidth="2" />
-            </svg>
+            {chartData?.revenue && chartData.revenue.some((d) => d.revenue > 0) ? (
+              <svg className="w-full h-full" viewBox="0 0 450 180" preserveAspectRatio="none">
+                {(() => {
+                  const data = chartData.revenue;
+                  const maxVal = Math.max(...data.map((d) => d.revenue), 1);
+                  const chartH = 140;
+                  const padL = 50;
+                  const padR = 10;
+                  const gap = (450 - padL - padR) / (data.length - 1 || 1);
+                  const toY = (v: number) => 160 - (v / maxVal) * chartH;
+                  const points = data.map((d, i) => ({ x: padL + i * gap, y: toY(d.revenue) }));
+                  const pathD = points.map((p, i) => i === 0 ? `M ${p.x} ${p.y}` : `C ${points[i-1].x + gap/2} ${points[i-1].y}, ${p.x - gap/2} ${p.y}, ${p.x} ${p.y}`).join(' ');
+                  const gridLines = [0, 0.25, 0.5, 0.75, 1].map((f) => ({ y: 160 - f * chartH, label: Math.round(maxVal * (1 - f)) }));
+                  return (
+                    <>
+                      {gridLines.map((gl, i) => (
+                        <g key={i}>
+                          <line x1={padL} y1={gl.y} x2={440} y2={gl.y} stroke="#F1F5F9" strokeDasharray="3 3" strokeWidth="1" />
+                          <text x={padL - 8} y={gl.y + 4} fill="#94A3B8" fontSize="10" textAnchor="end">
+                            {gl.label.toLocaleString()}
+                          </text>
+                        </g>
+                      ))}
+                      <path d={pathD} fill="none" stroke="#1A6B3C" strokeWidth="2.5" strokeLinecap="round" />
+                      {points.map((p, i) => (
+                        <g key={i}>
+                          <circle cx={p.x} cy={p.y} r="4" fill="#1A6B3C" stroke="#FFFFFF" strokeWidth="2" />
+                          <text x={p.x} y={175} fill="#94A3B8" fontSize="10" textAnchor="middle">{data[i].month}</text>
+                        </g>
+                      ))}
+                    </>
+                  );
+                })()}
+              </svg>
+            ) : (
+              <div className="flex items-center justify-center h-full text-sm text-[#71717A]">
+                No revenue data yet
+              </div>
+            )}
           </div>
         </div>
 
@@ -314,56 +320,48 @@ export default function AdminDashboardPage() {
           </div>
 
           <div className="h-60 w-full pt-2">
-            <svg className="w-full h-full" viewBox="0 0 450 180" preserveAspectRatio="none">
-              {/* Horizontal Gridlines */}
-              <line x1="35" y1="20" x2="440" y2="20" stroke="#F1F5F9" strokeDasharray="3 3" strokeWidth="1" />
-              <text x="25" y="24" fill="#94A3B8" fontSize="10" textAnchor="end">2400</text>
-
-              <line x1="35" y1="53" x2="440" y2="53" stroke="#F1F5F9" strokeDasharray="3 3" strokeWidth="1" />
-              <text x="25" y="57" fill="#94A3B8" fontSize="10" textAnchor="end">1800</text>
-
-              <line x1="35" y1="86" x2="440" y2="86" stroke="#F1F5F9" strokeDasharray="3 3" strokeWidth="1" />
-              <text x="25" y="90" fill="#94A3B8" fontSize="10" textAnchor="end">1200</text>
-
-              <line x1="35" y1="119" x2="440" y2="119" stroke="#F1F5F9" strokeDasharray="3 3" strokeWidth="1" />
-              <text x="25" y="123" fill="#94A3B8" fontSize="10" textAnchor="end">600</text>
-
-              <line x1="35" y1="152" x2="440" y2="152" stroke="#E2E8F0" strokeWidth="1" />
-              <text x="25" y="156" fill="#94A3B8" fontSize="10" textAnchor="end">0</text>
-
-              {/* Month Labels */}
-              <text x="65" y="172" fill="#94A3B8" fontSize="11" textAnchor="middle">Feb</text>
-              <text x="135" y="172" fill="#94A3B8" fontSize="11" textAnchor="middle">Mar</text>
-              <text x="205" y="172" fill="#94A3B8" fontSize="11" textAnchor="middle">Apr</text>
-              <text x="275" y="172" fill="#94A3B8" fontSize="11" textAnchor="middle">May</text>
-              <text x="345" y="172" fill="#94A3B8" fontSize="11" textAnchor="middle">Jun</text>
-              <text x="415" y="172" fill="#94A3B8" fontSize="11" textAnchor="middle">Jul</text>
-
-              {/* Grouped Bars */}
-              {/* Feb */}
-              <rect x="54" y="105" width="10" height="47" rx="2" fill="#1A6B3C" />
-              <rect x="66" y="142" width="10" height="10" rx="2" fill="#D4801A" />
-
-              {/* Mar */}
-              <rect x="124" y="92" width="10" height="60" rx="2" fill="#1A6B3C" />
-              <rect x="136" y="138" width="10" height="14" rx="2" fill="#D4801A" />
-
-              {/* Apr */}
-              <rect x="194" y="80" width="10" height="72" rx="2" fill="#1A6B3C" />
-              <rect x="206" y="134" width="10" height="18" rx="2" fill="#D4801A" />
-
-              {/* May */}
-              <rect x="264" y="65" width="10" height="87" rx="2" fill="#1A6B3C" />
-              <rect x="276" y="130" width="10" height="22" rx="2" fill="#D4801A" />
-
-              {/* Jun */}
-              <rect x="334" y="52" width="10" height="100" rx="2" fill="#1A6B3C" />
-              <rect x="346" y="126" width="10" height="26" rx="2" fill="#D4801A" />
-
-              {/* Jul */}
-              <rect x="404" y="42" width="10" height="110" rx="2" fill="#1A6B3C" />
-              <rect x="416" y="120" width="10" height="32" rx="2" fill="#D4801A" />
-            </svg>
+            {chartData?.signups && chartData.signups.some((d) => d.consumers > 0 || d.providers > 0) ? (
+              <svg className="w-full h-full" viewBox="0 0 450 180" preserveAspectRatio="none">
+                {(() => {
+                  const data = chartData.signups;
+                  const maxVal = Math.max(...data.map((d) => Math.max(d.consumers, d.providers)), 1);
+                  const chartH = 132;
+                  const padL = 40;
+                  const barGroupW = 65;
+                  const barW = 10;
+                  const baseY = 152;
+                  const toY = (v: number) => baseY - (v / maxVal) * chartH;
+                  const gridLines = [0, 0.25, 0.5, 0.75, 1].map((f) => baseY - f * chartH);
+                  const gridLabels = [0, 0.25, 0.5, 0.75, 1].map((f) => Math.round(maxVal * f));
+                  return (
+                    <>
+                      {gridLines.map((y, i) => (
+                        <g key={i}>
+                          <line x1={padL} y1={y} x2={440} y2={y} stroke="#F1F5F9" strokeDasharray="3 3" strokeWidth="1" />
+                          <text x={padL - 6} y={y + 4} fill="#94A3B8" fontSize="9" textAnchor="end">{gridLabels[i]}</text>
+                        </g>
+                      ))}
+                      {data.map((d, i) => {
+                        const cx = padL + 15 + i * barGroupW;
+                        const cH = (d.consumers / maxVal) * chartH;
+                        const pH = (d.providers / maxVal) * chartH;
+                        return (
+                          <g key={i}>
+                            <rect x={cx} y={toY(d.consumers)} width={barW} height={cH} rx="2" fill="#1A6B3C" />
+                            <rect x={cx + barW + 3} y={toY(d.providers)} width={barW} height={pH} rx="2" fill="#D4801A" />
+                            <text x={cx + barW + 1} y={172} fill="#94A3B8" fontSize="10" textAnchor="middle">{d.month}</text>
+                          </g>
+                        );
+                      })}
+                    </>
+                  );
+                })()}
+              </svg>
+            ) : (
+              <div className="flex items-center justify-center h-full text-sm text-[#71717A]">
+                No signup data yet
+              </div>
+            )}
           </div>
         </div>
       </div>

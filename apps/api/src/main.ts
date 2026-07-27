@@ -1,5 +1,6 @@
 import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
+import { Logger } from '@nestjs/common';
 import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
@@ -7,7 +8,9 @@ import { ValidationPipe } from './common/pipes/validation.pipe';
 import helmet from 'helmet';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, {
+    rawBody: true,
+  });
 
   app.use(helmet({
     crossOriginResourcePolicy: { policy: 'cross-origin' },
@@ -27,6 +30,6 @@ async function bootstrap() {
 
   const port = process.env.PORT || 4000;
   await app.listen(port);
-  console.log(`SabiPro API running on port ${port}`);
+  new Logger('Bootstrap').log(`SabiPro API running on port ${port}`);
 }
 bootstrap();

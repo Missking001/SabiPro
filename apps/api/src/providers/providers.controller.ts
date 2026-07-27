@@ -40,7 +40,7 @@ export class ProvidersController {
 
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.PROVIDER, Role.ADMIN)
+  @Roles(Role.CONSUMER, Role.PROVIDER, Role.ADMIN)
   async create(
     @Body() dto: CreateProviderDto,
     @CurrentUser() user: AuthenticatedUser,

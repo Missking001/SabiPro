@@ -7,7 +7,7 @@ import { PaymentsService } from './payments.service';
 import { ProviderBankDetailsDto } from './dto/payments.dto';
 import { Role } from '@prisma/client';
 
-@Controller('payouts')
+@Controller('api/payouts')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class PayoutsController {
   constructor(private readonly paymentsService: PaymentsService) {}

@@ -646,7 +646,7 @@ export default function ProviderProfilePage() {
               type="button"
               onClick={async () => {
                 await signOut({ redirect: false });
-                router.push('/auth/login');
+                router.push('/login');
               }}
               className="text-small text-neutral-500 hover:text-error-base font-medium transition-colors"
             >

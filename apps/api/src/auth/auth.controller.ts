@@ -2,6 +2,7 @@ import {
   Controller,
   Post,
   Get,
+  Patch,
   Body,
   Param,
   UseGuards,
@@ -21,6 +22,8 @@ import {
   ResetPasswordDto,
   ResendVerificationDto,
   AdminRegisterDto,
+  UpdateProfileDto,
+  ChangePasswordDto,
 } from './dto/auth.dto';
 
 @Controller('api/auth')
@@ -46,6 +49,7 @@ export class AuthController {
     return this.authService.verifyEmail(dto);
   }
 
+  @Throttle({ default: { limit: 3, ttl: 3600000 } })
   @Post('resend-verification')
   @HttpCode(HttpStatus.OK)
   async resendVerification(@Body() dto: ResendVerificationDto) {
@@ -65,6 +69,7 @@ export class AuthController {
     return this.authService.resetPassword(dto);
   }
 
+  @Throttle({ default: { limit: 5, ttl: 3600000 } })
   @Post('admin-register')
   @HttpCode(HttpStatus.OK)
   async adminRegister(@Body() dto: AdminRegisterDto) {
@@ -75,5 +80,24 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   async getMe(@CurrentUser() user: AuthenticatedUser) {
     return this.authService.getMe(user.userId);
+  }
+
+  @Patch('update-profile')
+  @UseGuards(JwtAuthGuard)
+  async updateProfile(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: UpdateProfileDto,
+  ) {
+    return this.authService.updateProfile(user.userId, dto);
+  }
+
+  @Post('change-password')
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  async changePassword(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: ChangePasswordDto,
+  ) {
+    return this.authService.changePassword(user.userId, dto);
   }
 }

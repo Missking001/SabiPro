@@ -205,7 +205,7 @@ export default function ConsumerDashboardPage() {
           if (active) setActiveTransaction(active);
         }
         if (notifsRes.status === 'fulfilled') {
-          setNotifications(notifsRes.value.data || []);
+          setNotifications(notifsRes.value.data?.data || []);
         }
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : 'Failed to load dashboard';
@@ -221,7 +221,7 @@ export default function ConsumerDashboardPage() {
   function handleSearch(e: React.FormEvent) {
     e.preventDefault();
     if (searchQuery.trim()) {
-      router.push(`/search?search=${encodeURIComponent(searchQuery.trim())}`);
+      router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
     } else {
       router.push('/search');
     }
@@ -699,7 +699,7 @@ export default function ConsumerDashboardPage() {
                     onClick={async () => {
                       setShowProfileModal(false);
                       await signOut({ redirect: false });
-                      router.push('/auth/login');
+                      router.push('/login');
                     }}
                     className="flex items-center justify-between p-3 rounded-component hover:bg-surface-bg transition-colors text-small font-medium text-neutral-900 w-full text-left"
                   >

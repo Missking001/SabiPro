@@ -37,15 +37,20 @@ export default function AdminUsersPage() {
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState<RoleFilter>('All');
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const pageSize = 20;
 
   useEffect(() => {
     loadUsers();
-  }, []);
+  }, [page]);
 
   async function loadUsers() {
+    setIsLoading(true);
     try {
-      const res = await api.admin.users();
+      const res = await api.admin.users(page, pageSize);
       setUsers(res.data || []);
+      setTotal((res as any).meta?.total || 0);
     } catch (err) {
       setError(err instanceof ApiClientError ? err.message : 'Failed to load users');
     } finally {
@@ -267,6 +272,32 @@ export default function AdminUsersPage() {
                 })}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {total > pageSize && (
+        <div className="flex items-center justify-between">
+          <p className="text-xs text-[#71717A]">
+            Showing {((page - 1) * pageSize) + 1}–{Math.min(page * pageSize, total)} of {total}
+          </p>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              disabled={page <= 1}
+              onClick={() => setPage((p) => p - 1)}
+              className="px-3 py-1.5 text-xs font-medium rounded-md border border-[#E5E7EB] text-[#18181B] hover:bg-[#F4F4F5] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              Previous
+            </button>
+            <button
+              type="button"
+              disabled={page * pageSize >= total}
+              onClick={() => setPage((p) => p + 1)}
+              className="px-3 py-1.5 text-xs font-medium rounded-md border border-[#E5E7EB] text-[#18181B] hover:bg-[#F4F4F5] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              Next
+            </button>
           </div>
         </div>
       )}

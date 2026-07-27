@@ -131,6 +131,17 @@ export class InquiriesService {
       throw new ForbiddenException('You can only update your own inquiries');
     }
 
+    const validTransitions: Record<string, string[]> = {
+      PENDING: ['SEEN', 'RESPONDED', 'CLOSED'],
+      SEEN: ['RESPONDED', 'CLOSED'],
+      RESPONDED: ['CLOSED'],
+      CLOSED: [],
+    };
+
+    if (!validTransitions[inquiry.status]?.includes(dto.status)) {
+      throw new BadRequestException(`Cannot transition from ${inquiry.status} to ${dto.status}`);
+    }
+
     const updated = await this.prisma.inquiry.update({
       where: { id },
       data: { status: dto.status },

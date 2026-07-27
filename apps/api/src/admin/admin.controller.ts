@@ -5,6 +5,7 @@ import {
   Patch,
   Param,
   Body,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { AdminService } from './admin.service';
@@ -36,8 +37,8 @@ export class AdminController {
   }
 
   @Get('flags')
-  async getFlags() {
-    return this.adminService.getFlags();
+  async getFlags(@Query('page') page?: string, @Query('pageSize') pageSize?: string) {
+    return this.adminService.getFlags(page ? parseInt(page, 10) : 1, pageSize ? parseInt(pageSize, 10) : 20);
   }
 
   @Patch('flags/:id/resolve')
@@ -55,22 +56,27 @@ export class AdminController {
   }
 
   @Get('users')
-  async getUsers() {
-    return this.adminService.getUsers();
+  async getUsers(@Query('page') page?: string, @Query('pageSize') pageSize?: string) {
+    return this.adminService.getUsers(page ? parseInt(page, 10) : 1, pageSize ? parseInt(pageSize, 10) : 20);
   }
 
   @Get('transactions')
-  async getTransactions() {
-    return this.adminService.getTransactions();
+  async getTransactions(@Query('page') page?: string, @Query('pageSize') pageSize?: string) {
+    return this.adminService.getTransactions(page ? parseInt(page, 10) : 1, pageSize ? parseInt(pageSize, 10) : 20);
   }
 
   @Get('providers')
-  async getProviders() {
-    return this.adminService.getProviders();
+  async getProviders(@Query('page') page?: string, @Query('pageSize') pageSize?: string) {
+    return this.adminService.getProviders(page ? parseInt(page, 10) : 1, pageSize ? parseInt(pageSize, 10) : 20);
   }
 
   @Get('dashboard')
   async getDashboard() {
     return this.adminService.getDashboard();
+  }
+
+  @Get('charts')
+  async getChartData() {
+    return this.adminService.getChartData();
   }
 }

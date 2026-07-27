@@ -108,6 +108,16 @@ export const api = {
         method: 'POST',
         body: JSON.stringify(data),
       }),
+    updateProfile: (data: { name?: string; phone?: string }) =>
+      request<{ id: string; name: string; email: string; role: string; phone: string | null }>('/api/auth/update-profile', {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      }),
+    changePassword: (data: { currentPassword: string; newPassword: string }) =>
+      request<{ message: string }>('/api/auth/change-password', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
   },
 
   providers: {
@@ -178,7 +188,10 @@ export const api = {
   },
 
   notifications: {
-    list: () => request<Notification[]>('/api/notifications'),
+    list: (page = 1, pageSize = 20) =>
+      request<{ data: Notification[]; meta: { page: number; pageSize: number; total: number } }>(
+        `/api/notifications?page=${page}&pageSize=${pageSize}`,
+      ),
     markRead: (id: string) =>
       request<Notification>(`/api/notifications/${id}/read`, { method: 'PATCH' }),
     markAllRead: () =>
@@ -196,14 +209,25 @@ export const api = {
         pendingVetting: number;
         pendingFlags: number;
       }>('/api/admin/dashboard'),
-    flags: () => request<ContentFlag[]>('/api/admin/flags'),
+    charts: () =>
+      request<{
+        revenue: { month: string; revenue: number }[];
+        signups: { month: string; consumers: number; providers: number }[];
+      }>('/api/admin/charts'),
+    flags: (page = 1, pageSize = 20) =>
+      request<{ data: ContentFlag[]; meta: { page: number; pageSize: number; total: number } }>(
+        `/api/admin/flags?page=${page}&pageSize=${pageSize}`,
+      ),
     resolveFlag: (id: string, action: 'REMOVE' | 'DISMISS') =>
       request<{ message: string }>(`/api/admin/flags/${id}/resolve`, {
         method: 'PATCH',
         body: JSON.stringify({ action }),
       }),
     providers: () => request<ProviderSummary[]>('/api/admin/providers'),
-    users: () => request<{ id: string; name: string; email: string; role: string; isActive: boolean; createdAt: string }[]>('/api/admin/users'),
+    users: (page = 1, pageSize = 20) =>
+      request<{ id: string; name: string; email: string; role: string; isActive: boolean; createdAt: string }[]>(
+        `/api/admin/users?page=${page}&pageSize=${pageSize}`,
+      ),
     suspendUser: (id: string) =>
       request<{ message: string }>(`/api/admin/users/${id}/suspend`, { method: 'PATCH' }),
     approveVetting: (id: string, badgeType: string) =>
@@ -213,7 +237,8 @@ export const api = {
       }),
     revokeBadge: (id: string) =>
       request<{ message: string }>(`/api/admin/vetting/${id}/revoke`, { method: 'POST' }),
-    transactions: () => request<Transaction[]>('/api/admin/transactions'),
+    transactions: (page = 1, pageSize = 20) =>
+      request<Transaction[]>(`/api/admin/transactions?page=${page}&pageSize=${pageSize}`),
   },
 
   payments: {

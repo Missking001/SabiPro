@@ -82,7 +82,11 @@ export class PaymentsService {
     currency: string;
     tx_ref: string;
   } | null> {
-    const secretKey = process.env.FLW_SECRET_KEY || '';
+    const secretKey = process.env.FLW_SECRET_KEY;
+    if (!secretKey) {
+      this.logger.error('FLW_SECRET_KEY not configured — cannot verify transaction');
+      return null;
+    }
     try {
       const response = await fetch(
         `https://api.flutterwave.com/v3/transactions/${flwTransactionId}/verify`,
@@ -187,12 +191,21 @@ export class PaymentsService {
     };
   }
 
-  async handleWebhook(body: any, signature: string) {
-    // Step 1: Verify webhook signature using HMAC-SHA256 with timing-safe comparison
-    const secret = process.env.FLW_WEBHOOK_SECRET || '';
+  async handleWebhook(body: any, signature: string, rawBody?: Buffer) {
+    if (!rawBody) {
+      this.logger.error('Webhook received without raw body — cannot verify signature');
+      return { status: 'error', message: 'Missing raw body' };
+    }
+
+    const secret = process.env.FLW_WEBHOOK_SECRET;
+    if (!secret) {
+      this.logger.error('FLW_WEBHOOK_SECRET not configured — rejecting webhook');
+      return { status: 'error', message: 'Webhook not configured' };
+    }
+
     const expectedSignature = crypto
       .createHmac('sha256', secret)
-      .update(JSON.stringify(body))
+      .update(rawBody)
       .digest('hex');
 
     let signatureValid = false;
@@ -395,7 +408,7 @@ export class PaymentsService {
   async releasePayout(id: string, userId: string, role: string = Role.CONSUMER) {
     const transaction = await this.prisma.transaction.findUnique({
       where: { id },
-      select: { id: true, consumerId: true, status: true, amount: true, providerId: true, gatewayRef: true },
+      select: { id: true, consumerId: true, status: true, amount: true, providerId: true, gatewayRef: true, payoutStatus: true },
     });
     if (!transaction) {
       throw new NotFoundException('Transaction not found');
@@ -405,6 +418,9 @@ export class PaymentsService {
     }
     if (transaction.status !== TxStatus.SUCCESSFUL) {
       throw new BadRequestException('Transaction must be successful before releasing payout');
+    }
+    if (transaction.payoutStatus !== PayoutStatus.PENDING) {
+      throw new BadRequestException('Payout has already been released or withheld');
     }
 
     const provider = await this.prisma.provider.findUnique({
@@ -475,6 +491,9 @@ export class PaymentsService {
     if (transaction.consumerId !== userId) {
       throw new ForbiddenException('Only the consumer can dispute this transaction');
     }
+    if (transaction.status !== TxStatus.SUCCESSFUL) {
+      throw new BadRequestException('Only successful transactions can be disputed');
+    }
 
     const provider = await this.prisma.provider.findUnique({
       where: { id: transaction.providerId },
@@ -517,10 +536,13 @@ export class PaymentsService {
   async refund(id: string) {
     const transaction = await this.prisma.transaction.findUnique({
       where: { id },
-      select: { id: true, status: true, gatewayRef: true, consumerId: true, providerId: true, amount: true },
+      select: { id: true, status: true, gatewayRef: true, consumerId: true, providerId: true, amount: true, payoutStatus: true },
     });
     if (!transaction) {
       throw new NotFoundException('Transaction not found');
+    }
+    if (transaction.status !== TxStatus.SUCCESSFUL && transaction.status !== TxStatus.DISPUTED) {
+      throw new BadRequestException('Only successful or disputed transactions can be refunded');
     }
 
     const provider = await this.prisma.provider.findUnique({

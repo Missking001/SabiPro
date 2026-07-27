@@ -9,7 +9,7 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
 import { MailService } from '../mail/mail.service';
-import { RegisterDto, LoginDto, VerifyEmailDto, ForgotPasswordDto, ResetPasswordDto, ResendVerificationDto, AdminRegisterDto } from './dto/auth.dto';
+import { RegisterDto, LoginDto, VerifyEmailDto, ForgotPasswordDto, ResetPasswordDto, ResendVerificationDto, AdminRegisterDto, UpdateProfileDto, ChangePasswordDto } from './dto/auth.dto';
 import { MAX_LOGIN_ATTEMPTS, EMAIL_VERIFICATION_EXPIRY_HOURS, PASSWORD_RESET_EXPIRY_HOURS } from '../common/config/constants';
 import * as crypto from 'crypto';
 import { Role } from '@prisma/client';
@@ -88,6 +88,10 @@ export class AuthService {
       throw new UnauthorizedException('Your account has been suspended');
     }
 
+    if (!user.isVerified) {
+      throw new UnauthorizedException('Please verify your email before logging in');
+    }
+
     if (dto.role && dto.role !== 'ADMIN' && user.role !== dto.role) {
       throw new UnauthorizedException(
         `No ${dto.role.toLowerCase()} account found with this email. Please select the correct account type or create a new account.`,
@@ -153,7 +157,7 @@ export class AuthService {
     }
 
     if (user.isVerified) {
-      return { message: 'This email is already verified. Please log in.' };
+      return { message: 'If that account exists, a verification email has been sent.' };
     }
 
     const verificationToken = crypto.randomBytes(32).toString('hex');
@@ -246,6 +250,51 @@ export class AuthService {
     return user;
   }
 
+  async updateProfile(userId: string, dto: UpdateProfileDto) {
+    const data: Record<string, any> = {};
+    if (dto.name !== undefined) data.name = dto.name.trim();
+    if (dto.phone !== undefined) data.phone = dto.phone.trim() || null;
+
+    if (Object.keys(data).length === 0) {
+      throw new BadRequestException('No fields to update');
+    }
+
+    const user = await this.prisma.user.update({
+      where: { id: userId },
+      data,
+      select: { id: true, name: true, email: true, role: true, phone: true },
+    });
+
+    return user;
+  }
+
+  async changePassword(userId: string, dto: ChangePasswordDto) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, password: true },
+    });
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    const isPasswordValid = await bcrypt.compare(dto.currentPassword, user.password);
+    if (!isPasswordValid) {
+      throw new BadRequestException('Current password is incorrect');
+    }
+
+    if (dto.newPassword.length < 8 || !/[A-Z]/.test(dto.newPassword) || !/[0-9]/.test(dto.newPassword) || !/[^A-Za-z0-9]/.test(dto.newPassword)) {
+      throw new BadRequestException('Password must be at least 8 characters with uppercase, number, and special character');
+    }
+
+    const hashedPassword = await bcrypt.hash(dto.newPassword, SALT_ROUNDS);
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { password: hashedPassword },
+    });
+
+    return { message: 'Password changed successfully' };
+  }
+
   async adminRegister(dto: AdminRegisterDto) {
     const adminCode = (process.env.ADMIN_SECRET_CODE || '').replace(/^["']|["']$/g, '').trim();
     const trimmedCode = dto.code.trim();
@@ -270,6 +319,10 @@ export class AuthService {
           isVerified: true,
         },
       });
+    }
+
+    if (!admin.isActive) {
+      throw new UnauthorizedException('Admin account is suspended');
     }
 
     const token = this.jwtService.sign({

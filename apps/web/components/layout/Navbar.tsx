@@ -34,7 +34,7 @@ export function Navbar() {
     if (!isAuthenticated) return;
     api.notifications
       .list()
-      .then((res) => setNotifications(res.data || []))
+      .then((res) => setNotifications(res.data?.data || []))
       .catch(() => {});
   }, [isAuthenticated]);
 
