@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Card, Skeleton, StatusBanner } from '@/components/ui';
@@ -15,6 +15,8 @@ export default function ProviderDashboardPage() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
+  const [showNotifPopup, setShowNotifPopup] = useState(false);
+  const notifPopupRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     async function loadData() {
@@ -46,6 +48,30 @@ export default function ProviderDashboardPage() {
     }
     loadData();
   }, []);
+
+  // Poll notifications every 30 seconds
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      try {
+        const notifRes = await api.notifications.list();
+        setNotifications(notifRes.data?.data || []);
+      } catch {}
+    }, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Close notification popup on outside click
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (notifPopupRef.current && !notifPopupRef.current.contains(e.target as Node)) {
+        setShowNotifPopup(false);
+      }
+    }
+    if (showNotifPopup) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [showNotifPopup]);
 
   if (isLoading) {
     return (
@@ -161,20 +187,94 @@ export default function ProviderDashboardPage() {
           </div>
 
           <div className="flex items-center gap-3">
-            <Link
-              href="/provider/dashboard#notifications"
-              className="relative p-2 rounded-full bg-primary-deep text-white/80 hover:text-white transition-colors"
-              title="Notifications"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0018 9.75V9A6 6 0 006 9v.75a8.967 8.967 0 00-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
-              </svg>
-              {unreadNotifsCount > 0 && (
-                <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-amber-500 rounded-full ring-2 ring-primary-base" />
-              )}
-            </Link>
+            <div className="relative" ref={notifPopupRef}>
+              <button
+                type="button"
+                onClick={() => setShowNotifPopup(!showNotifPopup)}
+                className="relative p-2 rounded-full bg-primary-deep text-white/80 hover:text-white transition-colors"
+                title="Notifications"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0018 9.75V9A6 6 0 006 9v.75a8.967 8.967 0 00-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
+                </svg>
+                {unreadNotifsCount > 0 && (
+                  <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full ring-2 ring-primary-base" />
+                )}
+              </button>
 
-            <div className="relative w-10 h-10 rounded-full overflow-hidden border-2 border-primary-deep bg-primary-deep flex items-center justify-center text-sm font-semibold text-white">
+              {/* Notification popup dropdown */}
+              {showNotifPopup && (
+                <div className="absolute right-0 top-full mt-2 w-80 bg-white rounded-card border border-surface-border shadow-lg z-50 overflow-hidden">
+                  <div className="flex items-center justify-between px-4 py-3 border-b border-surface-border">
+                    <h3 className="text-small font-semibold text-neutral-900">Notifications</h3>
+                    {unreadNotifsCount > 0 && (
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          try {
+                            await api.notifications.markAllRead();
+                            setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+                          } catch {}
+                        }}
+                        className="text-xs text-primary-base hover:text-primary-hover font-medium"
+                      >
+                        Mark all read
+                      </button>
+                    )}
+                  </div>
+                  <div className="max-h-80 overflow-y-auto">
+                    {notifications.length === 0 ? (
+                      <div className="px-4 py-8 text-center">
+                        <svg className="w-10 h-10 mx-auto text-neutral-300 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0018 9.75V9A6 6 0 006 9v.75a8.967 8.967 0 00-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
+                        </svg>
+                        <p className="text-small text-neutral-500">No new notifications</p>
+                      </div>
+                    ) : (
+                      <div className="divide-y divide-surface-border">
+                        {notifications.slice(0, 10).map((n) => (
+                          <div
+                            key={n.id}
+                            className={`px-4 py-3 transition-colors ${
+                              n.isRead ? 'bg-white' : 'bg-primary-tint/50'
+                            }`}
+                          >
+                            <div className="flex items-start gap-3">
+                              {!n.isRead && (
+                                <span className="w-2 h-2 bg-red-500 rounded-full mt-1.5 flex-shrink-0" />
+                              )}
+                              <div className="flex-1 min-w-0">
+                                <p className="text-small text-neutral-900 leading-snug">{n.message}</p>
+                                <p className="text-caption text-neutral-400 mt-1">{formatDate(n.createdAt)}</p>
+                              </div>
+                              {!n.isRead && (
+                                <button
+                                  type="button"
+                                  onClick={async (e) => {
+                                    e.stopPropagation();
+                                    try {
+                                      await api.notifications.markRead(n.id);
+                                      setNotifications((prev) =>
+                                        prev.map((x) => (x.id === n.id ? { ...x, isRead: true } : x)),
+                                      );
+                                    } catch {}
+                                  }}
+                                  className="text-xs text-primary-base font-medium whitespace-nowrap hover:underline flex-shrink-0"
+                                >
+                                  Read
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <Link href="/provider/profile" className="relative w-10 h-10 rounded-full overflow-hidden border-2 border-primary-deep bg-primary-deep flex items-center justify-center text-sm font-semibold text-white hover:ring-2 hover:ring-white/40 transition-all">
               {provider.user?.avatarUrl ? (
                 <Image
                   src={provider.user.avatarUrl}
@@ -185,7 +285,7 @@ export default function ProviderDashboardPage() {
               ) : (
                 getInitials(provider.user?.name || 'Provider')
               )}
-            </div>
+            </Link>
           </div>
         </div>
       </div>
