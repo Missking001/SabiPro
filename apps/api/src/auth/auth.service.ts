@@ -19,7 +19,6 @@ const SALT_ROUNDS = 12;
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
-  private loginAttempts: Map<string, { count: number; lockedUntil: Date | null }> = new Map();
 
   constructor(
     private readonly prisma: PrismaService,
@@ -71,17 +70,21 @@ export class AuthService {
   async login(dto: LoginDto) {
     const email = dto.email.toLowerCase().trim();
 
-    const attemptKey = `login:${email}`;
-    const attempts = this.loginAttempts.get(attemptKey);
-
-    if (attempts && attempts.lockedUntil && attempts.lockedUntil > new Date()) {
-      throw new UnauthorizedException('Account is locked due to too many failed attempts. Check your email for unlock instructions.');
+    const user = await this.prisma.user.findUnique({
+      where: { email },
+      select: {
+        id: true, name: true, email: true, password: true, role: true,
+        isActive: true, isVerified: true, tokenVersion: true,
+        loginAttempts: true, lockedUntil: true,
+      },
+    });
+    if (!user) {
+      throw new UnauthorizedException('Invalid email or password');
     }
 
-    const user = await this.prisma.user.findUnique({ where: { email } });
-    if (!user) {
-      await this.recordFailedAttempt(attemptKey);
-      throw new UnauthorizedException('Invalid email or password');
+    // Check if account is locked
+    if (user.lockedUntil && user.lockedUntil > new Date()) {
+      throw new UnauthorizedException('Account is locked due to too many failed attempts. Check your email for unlock instructions.');
     }
 
     if (!user.isActive) {
@@ -100,16 +103,23 @@ export class AuthService {
 
     const isPasswordValid = await bcrypt.compare(dto.password, user.password);
     if (!isPasswordValid) {
-      await this.recordFailedAttempt(attemptKey, user);
+      await this.recordFailedAttempt(user);
       throw new UnauthorizedException('Invalid email or password');
     }
 
-    this.loginAttempts.delete(attemptKey);
+    // Clear failed attempts on successful login
+    if (user.loginAttempts > 0) {
+      await this.prisma.user.update({
+        where: { id: user.id },
+        data: { loginAttempts: 0, lockedUntil: null },
+      });
+    }
 
     const token = this.jwtService.sign({
       sub: user.id,
       email: user.email,
       role: user.role,
+      tokenVersion: user.tokenVersion,
     });
 
     return {
@@ -232,11 +242,12 @@ export class AuthService {
         password: hashedPassword,
         resetToken: null,
         resetTokenExpiry: null,
+        tokenVersion: { increment: 1 },
       },
     });
 
     this.logger.log(`Password reset completed: ${user.email}`);
-    return { message: 'Password has been reset successfully' };
+    return { message: 'Password has been reset successfully. All sessions have been invalidated.' };
   }
 
   async getMe(userId: string) {
@@ -289,10 +300,13 @@ export class AuthService {
     const hashedPassword = await bcrypt.hash(dto.newPassword, SALT_ROUNDS);
     await this.prisma.user.update({
       where: { id: userId },
-      data: { password: hashedPassword },
+      data: {
+        password: hashedPassword,
+        tokenVersion: { increment: 1 },
+      },
     });
 
-    return { message: 'Password changed successfully' };
+    return { message: 'Password changed successfully. All other sessions have been invalidated.' };
   }
 
   async adminRegister(dto: AdminRegisterDto) {
@@ -306,6 +320,7 @@ export class AuthService {
 
     let admin = await this.prisma.user.findFirst({
       where: { role: Role.ADMIN },
+      select: { id: true, name: true, email: true, role: true, isActive: true, tokenVersion: true },
     });
 
     if (!admin) {
@@ -329,6 +344,7 @@ export class AuthService {
       sub: admin.id,
       email: admin.email,
       role: admin.role,
+      tokenVersion: admin.tokenVersion,
     });
 
     this.logger.log(`Admin login: ${admin.email}`);
@@ -344,17 +360,20 @@ export class AuthService {
     };
   }
 
-  private async recordFailedAttempt(key: string, user?: any) {
-    const entry = this.loginAttempts.get(key) || { count: 0, lockedUntil: null };
-    entry.count += 1;
-    if (entry.count >= MAX_LOGIN_ATTEMPTS) {
-      entry.lockedUntil = new Date(Date.now() + 15 * 60 * 1000);
-      if (user) {
-        this.mailService.sendLockoutEmail(user.email, user.name).catch((err) => {
-          this.logger.error(`Failed to send lockout email to ${user.email}`, err);
-        });
-      }
+  private async recordFailedAttempt(user: { id: string; email: string; name: string; loginAttempts: number }) {
+    const newAttempts = user.loginAttempts + 1;
+    const updateData: { loginAttempts: number; lockedUntil?: Date } = { loginAttempts: newAttempts };
+
+    if (newAttempts >= MAX_LOGIN_ATTEMPTS) {
+      updateData.lockedUntil = new Date(Date.now() + 15 * 60 * 1000);
+      this.mailService.sendLockoutEmail(user.email, user.name).catch((err) => {
+        this.logger.error(`Failed to send lockout email to ${user.email}`, err);
+      });
     }
-    this.loginAttempts.set(key, entry);
+
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: updateData,
+    });
   }
 }

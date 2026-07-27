@@ -7,6 +7,7 @@ interface JwtPayload {
   sub: string;
   email: string;
   role: string;
+  tokenVersion: number;
   iat: number;
   exp: number;
 }
@@ -24,10 +25,13 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   async validate(payload: JwtPayload) {
     const user = await this.prisma.user.findUnique({
       where: { id: payload.sub },
-      select: { id: true, email: true, role: true, isActive: true },
+      select: { id: true, email: true, role: true, isActive: true, tokenVersion: true },
     });
     if (!user || !user.isActive) {
       throw new UnauthorizedException('Account is suspended or not found');
+    }
+    if (payload.tokenVersion !== undefined && payload.tokenVersion !== user.tokenVersion) {
+      throw new UnauthorizedException('Session expired. Please log in again');
     }
     return { userId: user.id, email: user.email, role: user.role };
   }

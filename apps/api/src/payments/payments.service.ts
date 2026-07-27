@@ -10,6 +10,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { InitiatePaymentDto } from './dto/payments.dto';
 import { TxStatus, PayoutStatus, PayoutState, Role, NotificationType, Prisma } from '@prisma/client';
 import * as crypto from 'crypto';
+import { encrypt, decrypt, maskAccountNumber } from '../common/utils/encryption';
 
 @Injectable()
 export class PaymentsService {
@@ -21,9 +22,12 @@ export class PaymentsService {
     const provider = await this.prisma.provider.findUnique({ where: { userId } });
     if (!provider) throw new NotFoundException('Provider profile not found');
 
+    const encryptedBankCode = encrypt(dto.bankCode);
+    const encryptedAccountNumber = encrypt(dto.accountNumber);
+
     await this.prisma.provider.update({
       where: { userId },
-      data: { bankCode: dto.bankCode, accountNumber: dto.accountNumber },
+      data: { bankCode: encryptedBankCode, accountNumber: encryptedAccountNumber },
     });
 
     return { message: 'Bank details saved successfully' };
@@ -35,7 +39,15 @@ export class PaymentsService {
       select: { bankCode: true, accountNumber: true },
     });
     if (!provider) throw new NotFoundException('Provider profile not found');
-    return { bankCode: provider.bankCode || null, accountNumber: provider.accountNumber || null };
+
+    if (!provider.bankCode || !provider.accountNumber) {
+      return { bankCode: null, accountNumber: null };
+    }
+
+    return {
+      bankCode: decrypt(provider.bankCode),
+      accountNumber: maskAccountNumber(decrypt(provider.accountNumber)),
+    };
   }
 
   @Cron(CronExpression.EVERY_HOUR)
@@ -127,7 +139,7 @@ export class PaymentsService {
 
     const provider = await this.prisma.provider.findUnique({
       where: { id: dto.providerId },
-      select: { id: true, priceRangeMin: true, priceRangeMax: true, isAvailable: true },
+      select: { id: true, priceRangeMin: true, priceRangeMax: true, isAvailable: true, slug: true },
     });
     if (!provider) {
       throw new NotFoundException('Provider not found');
@@ -151,6 +163,14 @@ export class PaymentsService {
       }
     }
 
+    const consumer = await this.prisma.user.findUnique({
+      where: { id: consumerId },
+      select: { id: true, name: true, email: true },
+    });
+    if (!consumer) {
+      throw new NotFoundException('Consumer not found');
+    }
+
     const gatewayRef = `SABI-${Date.now()}-${crypto.randomBytes(8).toString('hex')}`;
 
     const transaction = await this.prisma.transaction.create({
@@ -164,6 +184,67 @@ export class PaymentsService {
         status: TxStatus.PENDING,
       },
     });
+
+    // Call Flutterwave API to create a real payment link
+    const flwSecretKey = process.env.FLW_SECRET_KEY;
+    const redirectUrl = process.env.FLW_REDIRECT_URL || `${process.env.ALLOWED_ORIGIN}/payments`;
+
+    let paymentUrl: string;
+
+    try {
+      const flwResponse = await fetch('https://api.flutterwave.com/v3/payments', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${flwSecretKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          tx_ref: gatewayRef,
+          amount: dto.amount / 100, // Flutterwave expects amount in Naira, we store in kobo
+          currency: 'NGN',
+          redirect_url: redirectUrl,
+          customer: {
+            email: consumer.email,
+            name: consumer.name,
+          },
+          meta: {
+            consumerId,
+            providerId: dto.providerId,
+            inquiryId: dto.inquiryId || null,
+          },
+          customizations: {
+            title: 'SabiPro Payment',
+            description: `Payment to ${provider.slug}`,
+          },
+        }),
+      });
+
+      const flwData = await flwResponse.json();
+
+      if (flwData.status !== 'success' || !flwData.data?.link) {
+        this.logger.error(`Flutterwave API error: ${JSON.stringify(flwData)}`);
+        await this.log('FLUTTERWAVE_API_ERROR', 'FAILED', {
+          gatewayRef,
+          response: flwData,
+        }, transaction.id, gatewayRef);
+        throw new BadRequestException('Failed to initialize payment. Please try again.');
+      }
+
+      paymentUrl = flwData.data.link;
+
+      await this.log('FLUTTERWAVE_API_SUCCESS', 'INITIATED', {
+        gatewayRef,
+        paymentUrl,
+      }, transaction.id, gatewayRef);
+    } catch (err) {
+      if (err instanceof BadRequestException) throw err;
+      this.logger.error(`Flutterwave API request failed: ${err.message}`);
+      await this.log('FLUTTERWAVE_API_ERROR', 'FAILED', {
+        gatewayRef,
+        error: err.message,
+      }, transaction.id, gatewayRef);
+      throw new BadRequestException('Failed to initialize payment. Please try again.');
+    }
 
     await this.prisma.notification.create({
       data: {
@@ -187,7 +268,7 @@ export class PaymentsService {
       transactionId: transaction.id,
       gatewayRef,
       amount: dto.amount,
-      paymentUrl: `https://checkout.flutterwave.com/pay/${gatewayRef}`,
+      paymentUrl,
     };
   }
 
@@ -434,6 +515,9 @@ export class PaymentsService {
       throw new BadRequestException('Provider has not set up their bank details yet');
     }
 
+    const decryptedBankCode = decrypt(provider.bankCode);
+    const decryptedAccountNumber = decrypt(provider.accountNumber);
+
     const platformFeePercent = parseInt(process.env.PLATFORM_FEE_PERCENT || '10', 10);
     const platformFee = Math.round(transaction.amount * (platformFeePercent / 100));
     const payoutAmount = transaction.amount - platformFee;
@@ -454,8 +538,8 @@ export class PaymentsService {
           amount: payoutAmount,
           platformFee,
           status: PayoutState.COMPLETED,
-          bankCode: provider.bankCode!,
-          accountNumber: provider.accountNumber!,
+          bankCode: decryptedBankCode,
+          accountNumber: decryptedAccountNumber,
           processedAt: new Date(),
         },
       });
@@ -603,6 +687,9 @@ export class PaymentsService {
           continue;
         }
 
+        const decryptedBankCode = decrypt(provider.bankCode);
+        const decryptedAccountNumber = decrypt(provider.accountNumber);
+
         const platformFeePercent = parseInt(process.env.PLATFORM_FEE_PERCENT || '10', 10);
         const platformFee = Math.round(tx.amount * (platformFeePercent / 100));
         const payoutAmount = tx.amount - platformFee;
@@ -623,8 +710,8 @@ export class PaymentsService {
               amount: payoutAmount,
               platformFee,
               status: PayoutState.COMPLETED,
-          bankCode: provider.bankCode!,
-          accountNumber: provider.accountNumber!,
+              bankCode: decryptedBankCode,
+              accountNumber: decryptedAccountNumber,
               processedAt: new Date(),
             },
           });
