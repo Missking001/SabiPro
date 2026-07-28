@@ -234,6 +234,16 @@ export class PaymentsService {
 
       paymentUrl = flwData.data.link;
 
+      if (!paymentUrl.includes('checkout') || !paymentUrl.includes('/hosted/')) {
+        this.logger.error(`Flutterwave returned malformed payment URL: ${paymentUrl}`);
+        await this.log('FLUTTERWAVE_API_ERROR', 'FAILED', {
+          gatewayRef,
+          error: 'Malformed payment URL',
+          response: flwData,
+        }, transaction.id, gatewayRef);
+        throw new BadRequestException('Payment provider returned an invalid checkout URL. Please try again or contact support.');
+      }
+
       await this.log('FLUTTERWAVE_API_SUCCESS', 'INITIATED', {
         gatewayRef,
         paymentUrl,
