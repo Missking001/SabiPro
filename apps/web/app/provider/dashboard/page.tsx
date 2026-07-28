@@ -655,7 +655,7 @@ export default function ProviderDashboardPage() {
                   </Link>
 
                   <Link
-                    href="/settings"
+                    href="/provider/settings"
                     onClick={() => setShowProfileModal(false)}
                     className="flex items-center justify-between p-3 rounded-component hover:bg-surface-bg transition-colors text-small font-medium text-neutral-900"
                   >
