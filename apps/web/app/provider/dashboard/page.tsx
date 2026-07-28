@@ -3,12 +3,15 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
+import { signOut } from 'next-auth/react';
 import { Card, Skeleton, StatusBanner } from '@/components/ui';
 import { api } from '@/lib/api';
 import { formatNaira, formatDate, getInitials } from '@/lib/utils';
 import type { MyProviderProfile, Inquiry, Transaction, Notification } from '@/types';
 
 export default function ProviderDashboardPage() {
+  const router = useRouter();
   const [provider, setProvider] = useState<MyProviderProfile | null>(null);
   const [inquiries, setInquiries] = useState<Inquiry[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -16,6 +19,7 @@ export default function ProviderDashboardPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [showNotifPopup, setShowNotifPopup] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
   const notifPopupRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -274,7 +278,11 @@ export default function ProviderDashboardPage() {
               )}
             </div>
 
-            <Link href="/provider/profile" className="relative w-10 h-10 rounded-full overflow-hidden border-2 border-primary-deep bg-primary-deep flex items-center justify-center text-sm font-semibold text-white hover:ring-2 hover:ring-white/40 transition-all">
+            <button
+              type="button"
+              onClick={() => setShowProfileModal(true)}
+              className="relative w-10 h-10 rounded-full overflow-hidden border-2 border-primary-deep bg-primary-deep flex items-center justify-center text-sm font-semibold text-white hover:ring-2 hover:ring-white/40 transition-all"
+            >
               {provider.user?.avatarUrl ? (
                 <Image
                   src={provider.user.avatarUrl}
@@ -285,7 +293,7 @@ export default function ProviderDashboardPage() {
               ) : (
                 getInitials(provider.user?.name || 'Provider')
               )}
-            </Link>
+            </button>
           </div>
         </div>
       </div>
@@ -547,6 +555,158 @@ export default function ProviderDashboardPage() {
           )}
         </div>
       </div>
+
+      {/* Profile Modal */}
+      {showProfileModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-card shadow-xl max-w-sm w-full mx-4 overflow-hidden">
+            <div className="relative p-6 pb-4">
+              <button
+                type="button"
+                onClick={() => setShowProfileModal(false)}
+                className="absolute top-4 right-4 text-neutral-500 hover:text-neutral-900"
+                aria-label="Close profile modal"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+
+              <div className="flex flex-col items-center text-center mt-2">
+                {/* Large Avatar */}
+                <div className="w-20 h-20 rounded-full bg-primary-tint flex items-center justify-center text-display font-medium text-primary-deep mb-4 overflow-hidden border-2 border-primary-base/20 relative">
+                  {provider.user?.avatarUrl ? (
+                    <Image src={provider.user.avatarUrl} alt={provider.user.name} fill className="object-cover" />
+                  ) : (
+                    <span>{getInitials(provider.user?.name || 'Provider')}</span>
+                  )}
+                </div>
+
+                <h2 className="text-subhead font-medium text-neutral-900">{provider.user?.name}</h2>
+                <p className="text-small text-neutral-500 mb-1">{provider.user?.email}</p>
+
+                <span className="inline-flex items-center gap-1.5 bg-primary-tint text-primary-deep text-caption font-medium px-2.5 py-0.5 rounded-pill mb-6">
+                  <span className="w-1.5 h-1.5 bg-success-base rounded-full" />
+                  Provider Account
+                </span>
+
+                <div className="w-full border-t border-surface-border pt-4 flex flex-col gap-1 text-left">
+                  <Link
+                    href="/provider/profile"
+                    onClick={() => setShowProfileModal(false)}
+                    className="flex items-center justify-between p-3 rounded-component hover:bg-surface-bg transition-colors text-small font-medium text-neutral-900"
+                  >
+                    <span className="flex items-center gap-3">
+                      <svg className="w-5 h-5 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                      Edit Profile
+                    </span>
+                    <span className="text-neutral-400 font-bold">&gt;</span>
+                  </Link>
+
+                  <Link
+                    href="/settings"
+                    onClick={() => setShowProfileModal(false)}
+                    className="flex items-center justify-between p-3 rounded-component hover:bg-surface-bg transition-colors text-small font-medium text-neutral-900"
+                  >
+                    <span className="flex items-center gap-3">
+                      <svg className="w-5 h-5 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 010 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 010-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                      Account Settings
+                    </span>
+                    <span className="text-neutral-400 font-bold">&gt;</span>
+                  </Link>
+
+                  <Link
+                    href="/provider/payments"
+                    onClick={() => setShowProfileModal(false)}
+                    className="flex items-center justify-between p-3 rounded-component hover:bg-surface-bg transition-colors text-small font-medium text-neutral-900"
+                  >
+                    <span className="flex items-center gap-3">
+                      <svg className="w-5 h-5 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                      </svg>
+                      Earnings & Payouts
+                    </span>
+                    <span className="text-neutral-400 font-bold">&gt;</span>
+                  </Link>
+
+                  <Link
+                    href="/provider/inquiries"
+                    onClick={() => setShowProfileModal(false)}
+                    className="flex items-center justify-between p-3 rounded-component hover:bg-surface-bg transition-colors text-small font-medium text-neutral-900"
+                  >
+                    <span className="flex items-center gap-3">
+                      <svg className="w-5 h-5 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z" />
+                      </svg>
+                      Inquiries
+                    </span>
+                    <span className="text-neutral-400 font-bold">&gt;</span>
+                  </Link>
+
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      setShowProfileModal(false);
+                      try {
+                        await api.providers.switchToConsumer();
+                      } catch {}
+                      await signOut({ redirect: false });
+                      router.push('/login');
+                    }}
+                    className="flex items-center justify-between p-3 rounded-component hover:bg-surface-bg transition-colors text-small font-medium text-neutral-900 w-full text-left"
+                  >
+                    <span className="flex items-center gap-3">
+                      <svg className="w-5 h-5 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                      </svg>
+                      Switch to Consumer
+                    </span>
+                    <span className="text-neutral-400 font-bold">&gt;</span>
+                  </button>
+
+                  <Link
+                    href="/help"
+                    onClick={() => setShowProfileModal(false)}
+                    className="flex items-center justify-between p-3 rounded-component hover:bg-surface-bg transition-colors text-small font-medium text-neutral-900"
+                  >
+                    <span className="flex items-center gap-3">
+                      <svg className="w-5 h-5 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z" />
+                      </svg>
+                      Help & Support
+                    </span>
+                    <span className="text-neutral-400 font-bold">&gt;</span>
+                  </Link>
+
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      setShowProfileModal(false);
+                      await signOut({ redirect: false });
+                      router.push('/login');
+                    }}
+                    className="flex items-center justify-between p-3 rounded-component hover:bg-surface-bg transition-colors text-small font-medium text-neutral-900 w-full text-left"
+                  >
+                    <span className="flex items-center gap-3">
+                      <svg className="w-5 h-5 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" />
+                      </svg>
+                      Sign out
+                    </span>
+                    <span className="text-neutral-400 font-bold">&gt;</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
