@@ -30,7 +30,7 @@ export class InquiriesController {
   @Throttle({ default: { limit: 5, ttl: 60000 } })
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.CONSUMER)
+  @Roles(Role.CONSUMER, Role.PROVIDER)
   async create(
     @Body() dto: CreateInquiryDto,
     @CurrentUser() user: AuthenticatedUser,

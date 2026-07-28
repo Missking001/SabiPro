@@ -16,8 +16,8 @@ export function ProviderActions({ providerId, providerName }: ProviderActionsPro
 
   if (authLoading) return null;
 
-  // Show sign-in CTA for unauthenticated or non-consumer users
-  if (!isAuthenticated || !isConsumer) {
+  // Show sign-in CTA for unauthenticated users
+  if (!isAuthenticated) {
     return (
       <div className="bg-neutral-0 border border-surface-border rounded-card p-6 md:p-8 mb-6 text-center">
         <p className="text-display mb-2">💬</p>
@@ -48,7 +48,7 @@ export function ProviderActions({ providerId, providerName }: ProviderActionsPro
   return (
     <div className="space-y-6 mb-6">
       <InquiryForm providerId={providerId} providerName={providerName} />
-      <ReviewForm providerId={providerId} />
+      {isConsumer && <ReviewForm providerId={providerId} />}
     </div>
   );
 }
