@@ -43,15 +43,6 @@ export class PaymentsController {
     return this.paymentsService.handleWebhook(body, signature, req.rawBody);
   }
 
-  @Get(':id')
-  @UseGuards(JwtAuthGuard)
-  async findOne(
-    @Param('id') id: string,
-    @CurrentUser() user: AuthenticatedUser,
-  ) {
-    return this.paymentsService.findOne(id, user.userId, user.role);
-  }
-
   @Get('consumer/history')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.CONSUMER)
@@ -64,6 +55,15 @@ export class PaymentsController {
   @Roles(Role.PROVIDER)
   async providerHistory(@CurrentUser() user: AuthenticatedUser) {
     return this.paymentsService.getProviderHistory(user.userId);
+  }
+
+  @Get(':id')
+  @UseGuards(JwtAuthGuard)
+  async findOne(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.paymentsService.findOne(id, user.userId, user.role);
   }
 
   @Post(':id/release')
