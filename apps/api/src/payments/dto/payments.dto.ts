@@ -26,4 +26,8 @@ export class InitiatePaymentDto {
   @IsString()
   @IsOptional()
   inquiryId?: string;
+
+  @IsString()
+  @IsOptional()
+  redirectUrl?: string;
 }

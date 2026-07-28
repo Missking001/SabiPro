@@ -100,6 +100,7 @@ function InquiryForm({ providerId, providerName }: { providerId: string; provide
       const res = await api.payments.initiate({
         providerId,
         amount: amountInKobo,
+        redirectUrl: window.location.origin + '/payments',
       });
 
       if (res.data?.paymentUrl) {

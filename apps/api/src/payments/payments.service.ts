@@ -189,7 +189,7 @@ export class PaymentsService {
 
     // Call Flutterwave API to create a real payment link
     const flwSecretKey = process.env.FLW_SECRET_KEY;
-    const redirectUrl = process.env.FLW_REDIRECT_URL || `${process.env.ALLOWED_ORIGIN}/payments`;
+    const redirectUrl = dto.redirectUrl || process.env.FLW_REDIRECT_URL || `${process.env.ALLOWED_ORIGIN}/payments`;
 
     let paymentUrl: string;
 

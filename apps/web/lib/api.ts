@@ -242,7 +242,7 @@ export const api = {
   },
 
   payments: {
-    initiate: (data: { providerId: string; inquiryId?: string; amount: number }) =>
+    initiate: (data: { providerId: string; inquiryId?: string; amount: number; redirectUrl?: string }) =>
       request<{ paymentUrl: string }>('/api/payments/initiate', {
         method: 'POST',
         body: JSON.stringify(data),
