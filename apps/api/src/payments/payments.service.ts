@@ -189,7 +189,13 @@ export class PaymentsService {
 
     // Call Flutterwave API to create a real payment link
     const flwSecretKey = process.env.FLW_SECRET_KEY;
-    const redirectUrl = dto.redirectUrl || process.env.FLW_REDIRECT_URL || `${process.env.ALLOWED_ORIGIN}/payments`;
+    let redirectUrl = dto.redirectUrl || process.env.FLW_REDIRECT_URL;
+    if (!redirectUrl || redirectUrl.startsWith('http://localhost')) {
+      redirectUrl = `${process.env.ALLOWED_ORIGIN}/payments`;
+    }
+    if (!redirectUrl || redirectUrl === 'undefined/payments') {
+      redirectUrl = 'https://sabi-pro-web.vercel.app/payments';
+    }
 
     let paymentUrl: string;
 
@@ -247,7 +253,10 @@ export class PaymentsService {
       await this.log('FLUTTERWAVE_API_SUCCESS', 'INITIATED', {
         gatewayRef,
         paymentUrl,
+        fullResponse: flwData,
       }, transaction.id, gatewayRef);
+
+      this.logger.log(`Flutterwave response: ${JSON.stringify(flwData)}`);
     } catch (err) {
       if (err instanceof BadRequestException) throw err;
       this.logger.error(`Flutterwave API request failed: ${err.message}`);
