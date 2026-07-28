@@ -240,7 +240,8 @@ export class PaymentsService {
 
       paymentUrl = flwData.data.link;
 
-      if (!paymentUrl.includes('checkout') || !paymentUrl.includes('/hosted/')) {
+      const flwBaseUrl = 'https://checkout-v2.dev-flutterwave.com/v3/hosted/pay';
+      if (paymentUrl === flwBaseUrl || !paymentUrl.includes('?')) {
         this.logger.error(`Flutterwave returned malformed payment URL: ${paymentUrl}`);
         await this.log('FLUTTERWAVE_API_ERROR', 'FAILED', {
           gatewayRef,
