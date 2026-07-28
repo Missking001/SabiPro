@@ -20,6 +20,9 @@ export default function ProviderDashboardPage() {
   const [error, setError] = useState('');
   const [showNotifPopup, setShowNotifPopup] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
+  const [modalAvatarPreview, setModalAvatarPreview] = useState<string | null>(null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const modalAvatarInputRef = useRef<HTMLInputElement>(null);
   const notifPopupRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -76,6 +79,25 @@ export default function ProviderDashboardPage() {
       return () => document.removeEventListener('mousedown', handleClickOutside);
     }
   }, [showNotifPopup]);
+
+  async function handleModalAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) return;
+    if (file.size > 1 * 1024 * 1024) return;
+
+    setUploadingAvatar(true);
+    try {
+      const res = await api.uploads.avatar(file);
+      const url = res.data && (res.data as any).url;
+      if (url) {
+        setModalAvatarPreview(url);
+        setProvider((prev) => prev ? { ...prev, user: { ...prev.user, avatarUrl: url } } : prev);
+      }
+    } catch {}
+    setUploadingAvatar(false);
+    if (modalAvatarInputRef.current) modalAvatarInputRef.current.value = '';
+  }
 
   if (isLoading) {
     return (
@@ -573,14 +595,40 @@ export default function ProviderDashboardPage() {
               </button>
 
               <div className="flex flex-col items-center text-center mt-2">
-                {/* Large Avatar */}
-                <div className="w-20 h-20 rounded-full bg-primary-tint flex items-center justify-center text-display font-medium text-primary-deep mb-4 overflow-hidden border-2 border-primary-base/20 relative">
-                  {provider.user?.avatarUrl ? (
-                    <Image src={provider.user.avatarUrl} alt={provider.user.name} fill className="object-cover" />
+                {/* Large Avatar — clickable to change */}
+                <button
+                  type="button"
+                  onClick={() => modalAvatarInputRef.current?.click()}
+                  className="w-20 h-20 rounded-full bg-primary-tint flex items-center justify-center text-display font-medium text-primary-deep mb-4 overflow-hidden border-2 border-primary-base/20 relative group cursor-pointer"
+                >
+                  {(modalAvatarPreview || provider.user?.avatarUrl) ? (
+                    <Image
+                      src={modalAvatarPreview || provider.user!.avatarUrl!}
+                      alt={provider.user?.name || 'Provider'}
+                      fill
+                      className="object-cover"
+                    />
                   ) : (
                     <span>{getInitials(provider.user?.name || 'Provider')}</span>
                   )}
-                </div>
+                  <div className="absolute inset-0 bg-neutral-900/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-full">
+                    {uploadingAvatar ? (
+                      <span className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <svg className="w-6 h-6 text-neutral-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.16a15.53 15.53 0 01-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0z" />
+                      </svg>
+                    )}
+                  </div>
+                </button>
+                <input
+                  ref={modalAvatarInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  className="hidden"
+                  onChange={handleModalAvatarChange}
+                />
 
                 <h2 className="text-subhead font-medium text-neutral-900">{provider.user?.name}</h2>
                 <p className="text-small text-neutral-500 mb-1">{provider.user?.email}</p>
