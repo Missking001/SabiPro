@@ -26,7 +26,7 @@ export class PaymentsController {
   @Throttle({ default: { limit: 3, ttl: 60000 } })
   @Post('initiate')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.CONSUMER)
+  @Roles(Role.CONSUMER, Role.PROVIDER)
   async initiate(
     @Body() dto: InitiatePaymentDto,
     @CurrentUser() user: AuthenticatedUser,

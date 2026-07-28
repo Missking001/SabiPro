@@ -85,7 +85,7 @@ function InquiryForm({ providerId, providerName }: { providerId: string; provide
 
   async function handleBookAndPay(e: React.FormEvent) {
     e.preventDefault();
-    const amountVal = parseFloat(bookingAmount);
+    const amountVal = parseFloat(bookingAmount.replace(/,/g, ''));
     if (isNaN(amountVal) || amountVal <= 0) {
       setBookingError('Please enter a valid amount');
       return;
@@ -219,13 +219,16 @@ function InquiryForm({ providerId, providerName }: { providerId: string; provide
                   <span className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-500 font-medium">₦</span>
                   <input
                     id="booking-amount"
-                    type="number"
-                    min="100"
-                    step="any"
+                    type="text"
+                    inputMode="numeric"
                     required
-                    placeholder="Enter amount (e.g. 5000)"
+                    placeholder="Enter amount (e.g. 5,000)"
                     value={bookingAmount}
-                    onChange={(e) => setBookingAmount(e.target.value)}
+                    onChange={(e) => {
+                      const raw = e.target.value.replace(/[^0-9]/g, '');
+                      if (raw === '') { setBookingAmount(''); return; }
+                      setBookingAmount(Number(raw).toLocaleString('en-US'));
+                    }}
                     className="w-full h-11 pl-8 pr-4 bg-neutral-0 border border-surface-input rounded-component text-body text-neutral-900 placeholder:text-neutral-500 focus:outline-none focus:border-primary-base focus:ring-1 focus:ring-primary-base"
                   />
                 </div>
