@@ -7,7 +7,7 @@ import { signOut } from 'next-auth/react';
 import { Skeleton, StatusBanner } from '@/components/ui';
 import { api } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
-import { useTheme } from '@/hooks/useTheme';
+
 import type { ProviderSummary, Transaction, Notification } from '@/types';
 
 function formatNaira(kobo: number): string {
@@ -143,7 +143,6 @@ function StarRating({ rating }: { rating: number }) {
 export default function ConsumerDashboardPage() {
   const router = useRouter();
   const { user, isAuthenticated, isLoading: authLoading, logout } = useAuth();
-  const { isDark, toggleTheme, mounted: themeMounted } = useTheme();
   const [providers, setProviders] = useState<ProviderSummary[]>([]);
   const [activeTransaction, setActiveTransaction] = useState<Transaction | null>(null);
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -272,28 +271,6 @@ export default function ConsumerDashboardPage() {
               </h1>
             </div>
             <div className="flex items-center gap-2">
-              {/* Dark mode toggle */}
-              {themeMounted && (
-                <button
-                  onClick={toggleTheme}
-                  className="w-10 h-10 flex items-center justify-center rounded-full bg-neutral-0/15 hover:bg-neutral-0/25 active:bg-neutral-0/35 transition-colors"
-                  aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
-                  id="dashboard-theme-toggle"
-                >
-                  {isDark ? (
-                    /* Sun icon */
-                    <svg className="w-5 h-5 text-neutral-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m12.728 0l-.707-.707M6.343 6.343l-.707-.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-                    </svg>
-                  ) : (
-                    /* Moon icon */
-                    <svg className="w-5 h-5 text-neutral-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-                    </svg>
-                  )}
-                </button>
-              )}
-
               {/* Notification bell */}
               <div className="relative">
                 <button
