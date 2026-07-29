@@ -237,6 +237,8 @@ export const api = {
       }),
     revokeBadge: (id: string) =>
       request<{ message: string }>(`/api/admin/vetting/${id}/revoke`, { method: 'POST' }),
+    approveProvider: (id: string) =>
+      request<{ message: string }>(`/api/admin/providers/${id}/approve`, { method: 'POST' }),
     transactions: (page = 1, pageSize = 20) =>
       request<Transaction[]>(`/api/admin/transactions?page=${page}&pageSize=${pageSize}`),
   },

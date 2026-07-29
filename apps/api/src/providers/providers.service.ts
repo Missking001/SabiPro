@@ -154,7 +154,7 @@ export class ProvidersService {
           priceRangeMax: dto.priceRangeMax,
           portfolioUrls: dto.portfolioUrls ?? [],
           documentUrls: dto.documentUrls ?? [],
-          onboardingState: OnboardingState.ACTIVE,
+          onboardingState: OnboardingState.REGISTERED,
         },
         select: {
           id: true,
@@ -195,15 +195,13 @@ export class ProvidersService {
     if (dto.portfolioUrls !== undefined) data.portfolioUrls = dto.portfolioUrls;
     if (dto.documentUrls !== undefined) data.documentUrls = dto.documentUrls;
 
-    if (!provider.bio && dto.bio) {
-      data.onboardingState = OnboardingState.ACTIVE;
-    } else if (
-      provider.onboardingState === OnboardingState.PROFILE_COMPLETE &&
-      (provider.bio || dto.bio) &&
-      provider.tradeCategory &&
-      provider.location
-    ) {
-      data.onboardingState = OnboardingState.ACTIVE;
+    if (provider.onboardingState === OnboardingState.REGISTERED) {
+      const hasBio = dto.bio !== undefined ? dto.bio : provider.bio;
+      const hasTrade = dto.tradeCategory !== undefined ? dto.tradeCategory : provider.tradeCategory;
+      const hasLocation = dto.location !== undefined ? dto.location : provider.location;
+      if (hasBio && hasTrade && hasLocation) {
+        data.onboardingState = OnboardingState.PROFILE_COMPLETE;
+      }
     }
 
     return this.prisma.provider.update({

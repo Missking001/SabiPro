@@ -68,6 +68,39 @@ export class AdminService {
     return badge;
   }
 
+  async approveProvider(providerId: string, adminId: string) {
+    const provider = await this.prisma.provider.findUnique({
+      where: { id: providerId },
+      select: { id: true, onboardingState: true, userId: true },
+    });
+    if (!provider) {
+      throw new NotFoundException('Provider not found');
+    }
+    if (provider.onboardingState !== OnboardingState.PROFILE_COMPLETE) {
+      throw new BadRequestException('Provider must be in PROFILE_COMPLETE state before approval');
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.provider.update({
+        where: { id: providerId },
+        data: { onboardingState: OnboardingState.ACTIVE },
+      });
+
+      await tx.notification.create({
+        data: {
+          userId: provider.userId,
+          type: NotificationType.BADGE_ISSUED,
+          message: 'Your profile has been approved. You are now visible to consumers searching on SabiPro.',
+          relatedId: providerId,
+          relatedType: 'Provider',
+        },
+      });
+    });
+
+    this.logger.log(`Provider ${providerId} approved by admin ${adminId}`);
+    return { message: 'Provider approved successfully' };
+  }
+
   async revokeBadge(providerId: string) {
     const badge = await this.prisma.vettingBadge.findUnique({
       where: { providerId },

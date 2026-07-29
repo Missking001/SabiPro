@@ -28,7 +28,11 @@ export default function AdminProvidersPage() {
       const res = await api.admin.providers();
       const unverified = (res.data || []).filter(
         (p) => !p.isVerified && (p.onboardingState === 'ACTIVE' || p.onboardingState === 'PROFILE_COMPLETE'),
-      );
+      ).sort((a, b) => {
+        if (a.onboardingState === 'PROFILE_COMPLETE' && b.onboardingState !== 'PROFILE_COMPLETE') return -1;
+        if (a.onboardingState !== 'PROFILE_COMPLETE' && b.onboardingState === 'PROFILE_COMPLETE') return 1;
+        return 0;
+      });
       setProviders(unverified);
     } catch (err: any) {
       setError(err.message || 'Failed to load providers');
@@ -45,6 +49,20 @@ export default function AdminProvidersPage() {
       setProviders((prev) => prev.filter((p) => p.id !== id));
       setFeedback(`Provider approved (${badgeType.replace('_', ' ')})`);
       setReviewProvider(null);
+    } catch (err) {
+      setFeedback(err instanceof ApiClientError ? err.message : 'Failed to approve provider');
+    } finally {
+      setProcessingId(null);
+    }
+  }
+
+  async function handleApproveProfile(id: string) {
+    setProcessingId(id);
+    setFeedback('');
+    try {
+      await api.admin.approveProvider(id);
+      setProviders((prev) => prev.filter((p) => p.id !== id));
+      setFeedback('Provider approved and is now visible in search');
     } catch (err) {
       setFeedback(err instanceof ApiClientError ? err.message : 'Failed to approve provider');
     } finally {
@@ -152,9 +170,23 @@ export default function AdminProvidersPage() {
                 </div>
                 <p className="text-sm text-[#71717A] italic">{p.tradeCategory} · {p.location}</p>
                 <p className="text-xs text-[#A1A1AA] mt-0.5">
-                  {p.onboardingState === 'PROFILE_COMPLETE' ? 'Profile complete' : 'Active'} · Not yet verified
+                  {p.onboardingState === 'PROFILE_COMPLETE' ? 'Awaiting approval' : 'Active'} · Not yet verified
                 </p>
                 <div className="flex flex-wrap items-center gap-2 mt-4">
+                  {p.onboardingState === 'PROFILE_COMPLETE' ? (
+                    <button
+                      type="button"
+                      disabled={isProcessing}
+                      onClick={() => handleApproveProfile(p.id)}
+                      className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-[#1A6B3C] rounded-full hover:bg-[#15573A] transition-colors disabled:opacity-50"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75" />
+                      </svg>
+                      Approve
+                    </button>
+                  ) : (
+                    <>
                   <button
                     type="button"
                     disabled={isProcessing}
@@ -188,6 +220,7 @@ export default function AdminProvidersPage() {
                     </svg>
                     Approve Both
                   </button>
+                  </>)}
                   <button
                     type="button"
                     disabled={isProcessing}

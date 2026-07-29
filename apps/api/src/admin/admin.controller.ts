@@ -31,6 +31,14 @@ export class AdminController {
     return this.adminService.approveVetting(id, badgeType || 'IDENTITY', user.userId);
   }
 
+  @Post('providers/:id/approve')
+  async approveProvider(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.adminService.approveProvider(id, user.userId);
+  }
+
   @Post('vetting/:id/revoke')
   async revokeBadge(@Param('id') id: string) {
     return this.adminService.revokeBadge(id);
