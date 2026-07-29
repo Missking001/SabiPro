@@ -59,6 +59,10 @@ export class AuthService {
       this.logger.error(`Failed to send verification email to ${user.email}: ${err.message}`);
     });
 
+    this.mailService.sendWelcomeEmail(user.email, user.name).catch((err) => {
+      this.logger.error(`Failed to send welcome email to ${user.email}: ${err.message}`);
+    });
+
     this.logger.log(`User registered: ${user.email}`);
 
     return {

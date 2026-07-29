@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from '../prisma/prisma.service';
+import { MailService } from '../mail/mail.service';
 import { InitiatePaymentDto } from './dto/payments.dto';
 import { TxStatus, PayoutStatus, PayoutState, Role, NotificationType, Prisma } from '@prisma/client';
 import * as crypto from 'crypto';
@@ -16,7 +17,10 @@ import { encrypt, decrypt, maskAccountNumber } from '../common/utils/encryption'
 export class PaymentsService {
   private readonly logger = new Logger(PaymentsService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly mailService: MailService,
+  ) {}
 
   async saveBankDetails(userId: string, dto: { bankCode: string; bankName: string; accountNumber: string }) {
     const provider = await this.prisma.provider.findUnique({ where: { userId } });
@@ -344,7 +348,10 @@ export class PaymentsService {
       // Step 2: Idempotency check — find the original pending transaction
       const existing = await this.prisma.transaction.findUnique({
         where: { gatewayRef: data.tx_ref },
-        include: { provider: { select: { userId: true } } },
+        include: {
+          provider: { select: { userId: true } },
+          consumer: { select: { name: true, email: true } },
+        },
       });
 
       if (!existing) {
@@ -445,6 +452,17 @@ export class PaymentsService {
         finalStatus: newStatus,
         verified: !!verifiedData,
       }, existing.id, data.tx_ref);
+
+      if (newStatus === TxStatus.SUCCESSFUL) {
+        this.mailService.sendPaymentReceiptEmail(
+          existing.consumer.email,
+          existing.consumer.name,
+          existing.amount,
+          existing.gatewayRef,
+        ).catch((err) => {
+          this.logger.error(`Failed to send payment receipt email to ${existing.consumer.email}: ${err.message}`);
+        });
+      }
     }
 
     return { status: 'ok' };
@@ -584,6 +602,17 @@ export class PaymentsService {
     }, id, transaction.gatewayRef);
 
     this.logger.log(`Payout released for transaction ${id}: ${payoutAmount} (fee: ${platformFee})`);
+
+    this.prisma.user.findUnique({
+      where: { id: provider.userId },
+      select: { name: true, email: true },
+    }).then((providerUser) => {
+      if (providerUser) {
+        this.mailService.sendPayoutReleaseEmail(providerUser.email, providerUser.name, payoutAmount, id).catch((err) => {
+          this.logger.error(`Failed to send payout release email to ${providerUser.email}: ${err.message}`);
+        });
+      }
+    });
 
     return { message: 'Payout released', amount: payoutAmount, platformFee };
   }
