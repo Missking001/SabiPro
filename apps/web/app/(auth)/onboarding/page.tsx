@@ -6,6 +6,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useSession } from 'next-auth/react';
 import { Button } from '@/components/ui';
+import { api } from '@/lib/api';
 
 const TRADE_CATEGORIES = [
   'Plumber', 'Electrician', 'Tailor', 'Carpenter', 'Mechanic', 'Cleaner',
@@ -74,6 +75,16 @@ export default function OnboardingPage() {
   }
 
   async function handleFinish() {
+    try {
+      await api.auth.completeOnboarding({
+        name: displayName,
+        city,
+        bio: role === 'PROVIDER' ? bio : undefined,
+        tradeCategory: role === 'PROVIDER' && selectedInterests.length > 0 ? selectedInterests[0] : undefined,
+      });
+    } catch {
+      // Onboarding data save is best-effort; proceed to dashboard anyway
+    }
     goToDashboard();
   }
 

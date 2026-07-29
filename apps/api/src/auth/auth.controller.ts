@@ -23,6 +23,7 @@ import {
   ResendVerificationDto,
   AdminRegisterDto,
   UpdateProfileDto,
+  CompleteOnboardingDto,
   ChangePasswordDto,
 } from './dto/auth.dto';
 
@@ -89,6 +90,16 @@ export class AuthController {
     @Body() dto: UpdateProfileDto,
   ) {
     return this.authService.updateProfile(user.userId, dto);
+  }
+
+  @Post('complete-onboarding')
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  async completeOnboarding(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: CompleteOnboardingDto,
+  ) {
+    return this.authService.completeOnboarding(user.userId, dto);
   }
 
   @Post('change-password')

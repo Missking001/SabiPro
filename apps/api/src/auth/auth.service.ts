@@ -9,7 +9,7 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
 import { MailService } from '../mail/mail.service';
-import { RegisterDto, LoginDto, VerifyEmailDto, ForgotPasswordDto, ResetPasswordDto, ResendVerificationDto, AdminRegisterDto, UpdateProfileDto, ChangePasswordDto } from './dto/auth.dto';
+import { RegisterDto, LoginDto, VerifyEmailDto, ForgotPasswordDto, ResetPasswordDto, ResendVerificationDto, AdminRegisterDto, UpdateProfileDto, CompleteOnboardingDto, ChangePasswordDto } from './dto/auth.dto';
 import { MAX_LOGIN_ATTEMPTS, EMAIL_VERIFICATION_EXPIRY_HOURS, PASSWORD_RESET_EXPIRY_HOURS } from '../common/config/constants';
 import * as crypto from 'crypto';
 import { Role } from '@prisma/client';
@@ -79,7 +79,7 @@ export class AuthService {
       select: {
         id: true, name: true, email: true, password: true, role: true,
         isActive: true, isVerified: true, tokenVersion: true,
-        loginAttempts: true, lockedUntil: true,
+        loginAttempts: true, lockedUntil: true, onboardingCompleted: true,
       },
     });
     if (!user) {
@@ -119,6 +119,8 @@ export class AuthService {
       });
     }
 
+    const needsOnboarding = !user.onboardingCompleted;
+
     const token = this.jwtService.sign({
       sub: user.id,
       email: user.email,
@@ -128,6 +130,7 @@ export class AuthService {
 
     return {
       token,
+      needsOnboarding,
       user: {
         id: user.id,
         name: user.name,
@@ -263,6 +266,37 @@ export class AuthService {
       throw new UnauthorizedException('User not found');
     }
     return user;
+  }
+
+  async completeOnboarding(userId: string, dto: CompleteOnboardingDto) {
+    const data: Record<string, any> = {};
+    if (dto.name !== undefined) data.name = dto.name.trim();
+    if (dto.city !== undefined) data.city = dto.city.trim();
+    data.onboardingCompleted = true;
+
+    await this.prisma.user.update({
+      where: { id: userId },
+      data,
+    });
+
+    if (dto.tradeCategory) {
+      const existingProvider = await this.prisma.provider.findUnique({ where: { userId } });
+      if (!existingProvider) {
+        const providerSlug = `${dto.name?.toLowerCase().replace(/\s+/g, '-') || 'provider'}-${crypto.randomBytes(4).toString('hex')}`;
+        await this.prisma.provider.create({
+          data: {
+            userId,
+            slug: providerSlug,
+            tradeCategory: dto.tradeCategory,
+            location: dto.city || '',
+            bio: dto.bio || null,
+          },
+        });
+      }
+    }
+
+    this.logger.log(`Onboarding completed: ${userId}`);
+    return { message: 'Onboarding completed' };
   }
 
   async updateProfile(userId: string, dto: UpdateProfileDto) {

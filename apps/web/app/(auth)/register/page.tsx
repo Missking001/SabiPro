@@ -4,10 +4,8 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
-import { getSession } from 'next-auth/react';
 import { Button, StatusBanner } from '@/components/ui';
 import { api, ApiClientError } from '@/lib/api';
-import { useAuth } from '@/hooks/useAuth';
 
 const CITIES = ['Lagos', 'Abuja'];
 
@@ -73,7 +71,6 @@ function validateEmail(email: string): string | undefined {
 
 export default function RegisterPage() {
   const router = useRouter();
-  const { login } = useAuth();
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
@@ -86,6 +83,7 @@ export default function RegisterPage() {
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showModal, setShowModal] = useState(false);
   const visibleRequirements = getVisibleRequirements(password);
 
   function validate(): boolean {
@@ -114,18 +112,7 @@ export default function RegisterPage() {
 
     try {
       await api.auth.register({ name: name.trim(), email: email.trim(), password, role, phone: phone.trim(), city });
-
-      const loginResult = await login(email.trim(), password);
-      if (loginResult?.ok) {
-        const session = await getSession();
-        if (session?.user) {
-          router.push('/onboarding');
-          router.refresh();
-          return;
-        }
-      }
-
-      router.push('/login?registered=true');
+      setShowModal(true);
     } catch (err: any) {
       if (err instanceof ApiClientError) {
         setError(err.message);
@@ -135,6 +122,11 @@ export default function RegisterPage() {
     } finally {
       setIsLoading(false);
     }
+  }
+
+  function handleModalDismiss() {
+    setShowModal(false);
+    router.push('/login?registered=true');
   }
 
   return (
@@ -407,6 +399,44 @@ export default function RegisterPage() {
           </div>
         </div>
       </div>
+
+      {showModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+          <div className="bg-neutral-0 rounded-card p-6 md:p-8 max-w-sm w-full shadow-xl text-center">
+            <div className="w-14 h-14 rounded-full bg-success-bg flex items-center justify-center mx-auto mb-4">
+              <svg className="w-7 h-7 text-success-base" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
+              </svg>
+            </div>
+            <h2 className="text-xl font-medium text-neutral-900 mb-2">Check your email</h2>
+            <p className="text-small text-neutral-700 mb-6 leading-relaxed">
+              Your account was created successfully. We sent a verification link to <strong>{email}</strong>.
+              Click the link to activate your account, then log in.
+            </p>
+            <p className="text-caption text-neutral-500 mb-6">
+              Didn&apos;t receive the email? Check your spam folder or{' '}
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    await api.auth.resendVerification(email);
+                  } catch {}
+                }}
+                className="text-primary-base hover:text-primary-hover underline bg-transparent border-none p-0 cursor-pointer"
+              >
+                resend
+              </button>
+            </p>
+            <button
+              type="button"
+              onClick={handleModalDismiss}
+              className="w-full py-3 px-6 bg-primary-base hover:bg-primary-deep text-neutral-0 rounded-[14px] font-medium transition-colors"
+            >
+              Got it
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

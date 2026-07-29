@@ -33,7 +33,7 @@ export const authOptions: NextAuthOptions = {
             throw new Error(json.error?.message || 'Invalid email or password');
           }
 
-          const { token, user } = json.data;
+          const { token, user, needsOnboarding } = json.data;
 
           return {
             id: user.id,
@@ -41,6 +41,7 @@ export const authOptions: NextAuthOptions = {
             email: user.email,
             role: user.role,
             accessToken: token,
+            needsOnboarding,
           };
         } catch (err: any) {
           throw new Error(err.message || 'Login failed');
@@ -55,6 +56,7 @@ export const authOptions: NextAuthOptions = {
         token.id = user.id;
         token.role = (user as any).role;
         token.accessToken = (user as any).accessToken;
+        token.needsOnboarding = (user as any).needsOnboarding;
       }
       return token;
     },
@@ -64,6 +66,7 @@ export const authOptions: NextAuthOptions = {
         (session.user as any).id = token.id as string;
         (session.user as any).role = token.role;
         (session.user as any).accessToken = token.accessToken;
+        (session.user as any).needsOnboarding = token.needsOnboarding;
       }
       return session;
     },

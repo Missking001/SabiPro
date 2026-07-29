@@ -86,6 +86,24 @@ export class UpdateProfileDto {
   phone?: string;
 }
 
+export class CompleteOnboardingDto {
+  @IsString()
+  @IsOptional()
+  name?: string;
+
+  @IsString()
+  @IsOptional()
+  city?: string;
+
+  @IsString()
+  @IsOptional()
+  bio?: string;
+
+  @IsString()
+  @IsOptional()
+  tradeCategory?: string;
+}
+
 export class ChangePasswordDto {
   @IsString()
   @IsNotEmpty()

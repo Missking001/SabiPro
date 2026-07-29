@@ -1,27 +1,27 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
-import { Button, Input, StatusBanner } from '@/components/ui';
-import Link from 'next/link';
+import { useState, useEffect, useRef, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 function VerifyEmailForm() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const [token, setToken] = useState(searchParams.get('token') || '');
   const [message, setMessage] = useState('');
   const [isError, setIsError] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
+  const verifiedRef = useRef(false);
 
   useEffect(() => {
     const urlToken = searchParams.get('token');
-    if (urlToken && !message) {
+    if (urlToken && !verifiedRef.current) {
       setToken(urlToken);
       handleVerify(urlToken);
     }
   }, []);
 
   async function handleVerify(tokenToVerify: string) {
-    if (isVerifying) return;
+    if (isVerifying || verifiedRef.current) return;
     setIsVerifying(true);
     setMessage('');
 
@@ -33,8 +33,12 @@ function VerifyEmailForm() {
       });
       const data = await res.json();
       if (res.ok) {
-        setMessage(data.data?.message || 'Email verified successfully. You can now log in.');
+        verifiedRef.current = true;
+        setMessage('Email verified successfully! Redirecting to login...');
         setIsError(false);
+        setTimeout(() => {
+          router.push('/login?verified=true');
+        }, 2000);
       } else {
         setMessage(data.error?.message || 'Verification failed');
         setIsError(true);
@@ -47,46 +51,34 @@ function VerifyEmailForm() {
     }
   }
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    await handleVerify(token);
-  }
-
   return (
-    <div className="bg-neutral-0 border border-surface-border rounded-card p-6 md:p-8">
-      <h1 className="text-heading text-neutral-900 text-center mb-1">Verify your email</h1>
-      <p className="text-small text-neutral-500 text-center mb-6">
-        Enter the verification token sent to your email
-      </p>
-
+    <div className="bg-neutral-0 border border-surface-border rounded-card p-6 md:p-8 text-center">
+      {!verifiedRef.current && !message && (
+        <>
+          <h1 className="text-heading text-neutral-900 mb-1">Verify your email</h1>
+          <p className="text-small text-neutral-500 mb-6">Verifying your account...</p>
+          {isVerifying && (
+            <div className="flex justify-center">
+              <div className="w-8 h-8 border-2 border-primary-base border-t-transparent rounded-full animate-spin" />
+            </div>
+          )}
+        </>
+      )}
       {message && (
-        <StatusBanner variant={isError ? 'error' : 'success'} className="mb-4">
-          {message}
-        </StatusBanner>
+        <>
+          {!isError && (
+            <div className="w-14 h-14 rounded-full bg-success-bg flex items-center justify-center mx-auto mb-4">
+              <svg className="w-7 h-7 text-success-base" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+              </svg>
+            </div>
+          )}
+          <p className={`text-body mb-4 ${isError ? 'text-error-base' : 'text-neutral-900'}`}>{message}</p>
+          {!isError && (
+            <p className="text-caption text-neutral-500">You will be redirected to the login page shortly.</p>
+          )}
+        </>
       )}
-
-      {isVerifying && !message && (
-        <div className="text-center text-neutral-500 mb-4">Verifying your email...</div>
-      )}
-
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <Input
-          label="Verification token"
-          placeholder="Paste your verification token"
-          value={token}
-          onChange={(e) => setToken(e.target.value)}
-          required
-        />
-        <Button type="submit" className="w-full" disabled={isVerifying}>
-          {isVerifying ? 'Verifying...' : 'Verify email'}
-        </Button>
-      </form>
-
-      <div className="mt-6 text-center text-small text-neutral-500">
-        <Link href="/login" className="text-primary-base hover:text-primary-hover font-medium">
-          Back to sign in
-        </Link>
-      </div>
     </div>
   );
 }

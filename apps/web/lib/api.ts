@@ -113,6 +113,16 @@ export const api = {
         method: 'PATCH',
         body: JSON.stringify(data),
       }),
+    verifyEmail: (token: string) =>
+      request<{ message: string }>('/api/auth/verify-email', {
+        method: 'POST',
+        body: JSON.stringify({ token }),
+      }),
+    completeOnboarding: (data: { name?: string; city?: string; bio?: string; tradeCategory?: string }) =>
+      request<{ message: string }>('/api/auth/complete-onboarding', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
     changePassword: (data: { currentPassword: string; newPassword: string }) =>
       request<{ message: string }>('/api/auth/change-password', {
         method: 'POST',

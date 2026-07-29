@@ -39,11 +39,15 @@ export default function LoginPage() {
   const [isUnverified, setIsUnverified] = useState(false);
   const [resendMsg, setResendMsg] = useState('');
   const [registeredMsg, setRegisteredMsg] = useState('');
+  const [verifiedMsg, setVerifiedMsg] = useState('');
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get('registered') === 'true') {
       setRegisteredMsg('Account created successfully! Verify your email to log in.');
+    }
+    if (params.get('verified') === 'true') {
+      setVerifiedMsg('Email verified successfully! You can now log in.');
     }
   }, []);
 
@@ -86,8 +90,10 @@ export default function LoginPage() {
         return;
       }
 
-      const userRole = (session.user as any)?.role;
-      if (userRole === 'PROVIDER') {
+      const sUser = session.user as any;
+      if (sUser?.needsOnboarding) {
+        router.push('/onboarding');
+      } else if (sUser?.role === 'PROVIDER') {
         router.push('/provider/dashboard');
       } else {
         router.push('/dashboard');
@@ -146,6 +152,9 @@ export default function LoginPage() {
             Log in to your SabiPro account
           </p>
 
+          {verifiedMsg && (
+            <StatusBanner variant="success" className="mb-6">{verifiedMsg}</StatusBanner>
+          )}
           {registeredMsg && (
             <StatusBanner variant="success" className="mb-6">{registeredMsg}</StatusBanner>
           )}
