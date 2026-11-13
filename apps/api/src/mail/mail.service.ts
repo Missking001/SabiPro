@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import * as nodemailer from 'nodemailer';
+import * as dns from 'dns';
 
 @Injectable()
 export class MailService {
@@ -14,19 +15,24 @@ export class MailService {
     const hasRealSmtp = mailUser && mailPass
       && mailUser !== 'dummy@ethereal.email'
       && mailPass !== 'dummy-pass'
+      && !mailPass.includes('your_resend_api_key')
       && mailHost && mailHost !== 'smtp.ethereal.email';
 
     if (hasRealSmtp) {
+      const port = parseInt(process.env.MAIL_PORT || '587', 10);
       this.transporter = nodemailer.createTransport({
         host: mailHost,
-        port: parseInt(process.env.MAIL_PORT || '587', 10),
-        secure: false,
+        port,
+        secure: port === 465,
         auth: { user: mailUser, pass: mailPass },
-        connectionTimeout: 5000,
-        greetingTimeout: 5000,
-        socketTimeout: 10000,
-      });
-      this.logger.log(`SMTP transport configured: ${mailHost} as ${mailUser}`);
+        connectionTimeout: 30000,
+        greetingTimeout: 15000,
+        socketTimeout: 30000,
+        lookup: (hostname: string, opts: dns.LookupOptions, cb: (err: NodeJS.ErrnoException | null, address: string, family: number) => void) => {
+          dns.lookup(hostname, { ...opts, family: 4 }, cb);
+        },
+      } as any);
+      this.logger.log(`SMTP transport configured: ${mailHost}:${port} as ${mailUser}`);
     } else {
       const testAccount = await nodemailer.createTestAccount();
       this.transporter = nodemailer.createTransport({
@@ -43,11 +49,20 @@ export class MailService {
     }
   }
 
+  private get fromAddress(): string {
+    const senderEmail =
+      process.env.MAIL_FROM ||
+      (process.env.MAIL_USER && process.env.MAIL_USER.includes('@')
+        ? process.env.MAIL_USER
+        : 'onboarding@resend.dev');
+    return `"SabiPro" <${senderEmail}>`;
+  }
+
   async sendVerificationEmail(to: string, name: string, token: string): Promise<void> {
     const verifyUrl = `${process.env.ALLOWED_ORIGIN || 'http://localhost:3000'}/verify-email?token=${token}`;
 
     const info = await this.transporter!.sendMail({
-      from: '"SabiPro" <noreply@sabipro.com>',
+      from: this.fromAddress,
       to,
       subject: 'Verify your SabiPro account',
       text: `Hi ${name},\n\nWelcome to SabiPro! Please verify your email by clicking the link below:\n\n${verifyUrl}\n\nThis link expires in 24 hours.\n\nIf you did not create an account, please ignore this email.\n\nBest,\nThe SabiPro Team`,
@@ -76,7 +91,7 @@ export class MailService {
     const resetUrl = `${process.env.ALLOWED_ORIGIN || 'http://localhost:3000'}/reset-password?token=${token}`;
 
     const info = await this.transporter!.sendMail({
-      from: '"SabiPro" <noreply@sabipro.com>',
+      from: this.fromAddress,
       to,
       subject: 'Reset your SabiPro password',
       text: `Hi ${name},\n\nYou requested a password reset. Click the link below to set a new password:\n\n${resetUrl}\n\nThis link expires in 1 hour.\n\nIf you did not request this, please ignore this email.\n\nBest,\nThe SabiPro Team`,
@@ -103,7 +118,7 @@ export class MailService {
 
   async sendWelcomeEmail(to: string, name: string): Promise<void> {
     const info = await this.transporter!.sendMail({
-      from: '"SabiPro" <noreply@sabipro.com>',
+      from: this.fromAddress,
       to,
       subject: 'Welcome to SabiPro!',
       text: `Hi ${name},\n\nWelcome to SabiPro! We're excited to have you on board.\n\nYour account has been created successfully. Please check your inbox for a verification email to activate your account.\n\nStart exploring trusted local service providers in your area today.\n\nBest,\nThe SabiPro Team`,
@@ -130,7 +145,7 @@ export class MailService {
 
   async sendPaymentReceiptEmail(to: string, name: string, amount: number, gatewayRef: string): Promise<void> {
     const info = await this.transporter!.sendMail({
-      from: '"SabiPro" <noreply@sabipro.com>',
+      from: this.fromAddress,
       to,
       subject: 'Payment Receipt — SabiPro',
       text: `Hi ${name},\n\nYour payment of ₦${(amount / 100).toLocaleString('en-NG')} has been confirmed.\n\nReference: ${gatewayRef}\n\nThe funds are held securely in escrow and will be released to the service provider once you confirm the job is complete.\n\nThank you for using SabiPro.\n\nBest,\nThe SabiPro Team`,
@@ -161,7 +176,7 @@ export class MailService {
 
   async sendPayoutReleaseEmail(to: string, name: string, amount: number, transactionId: string): Promise<void> {
     const info = await this.transporter!.sendMail({
-      from: '"SabiPro" <noreply@sabipro.com>',
+      from: this.fromAddress,
       to,
       subject: 'Payout Released — SabiPro',
       text: `Hi ${name},\n\nA payout of ₦${(amount / 100).toLocaleString('en-NG')} has been released to your bank account.\n\nTransaction ref: ${transactionId.slice(0, 8)}...\n\nThank you for using SabiPro.\n\nBest,\nThe SabiPro Team`,
@@ -192,7 +207,7 @@ export class MailService {
 
   async sendLockoutEmail(to: string, name: string): Promise<void> {
     const info = await this.transporter!.sendMail({
-      from: '"SabiPro" <noreply@sabipro.com>',
+      from: this.fromAddress,
       to,
       subject: 'Temporary Lockout Notification',
       text: `Hi ${name},\n\nYour SabiPro account has been temporarily locked for 15 minutes due to 5 consecutive failed login attempts.\n\nIf this was not you, please reset your password immediately to secure your account.\n\nBest,\nThe SabiPro Team`,

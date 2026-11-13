@@ -30,6 +30,8 @@ services:
         sync: false
       - key: MAIL_PASS
         sync: false
+      - key: MAIL_FROM
+        sync: false
       - key: FLW_PUBLIC_KEY
         sync: false
       - key: FLW_SECRET_KEY

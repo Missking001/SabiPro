@@ -84,6 +84,8 @@ export default function RegisterPage() {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
+  const [resendMsg, setResendMsg] = useState('');
+  const [isResending, setIsResending] = useState(false);
   const visibleRequirements = getVisibleRequirements(password);
 
   function validate(): boolean {
@@ -413,18 +415,31 @@ export default function RegisterPage() {
               Your account was created successfully. We sent a verification link to <strong>{email}</strong>.
               Click the link to activate your account, then log in.
             </p>
+            {resendMsg && (
+              <p className={`text-caption mb-4 ${resendMsg.startsWith('Verification email sent') ? 'text-success-base' : 'text-error-base'}`}>
+                {resendMsg}
+              </p>
+            )}
             <p className="text-caption text-neutral-500 mb-6">
               Didn&apos;t receive the email? Check your spam folder or{' '}
               <button
                 type="button"
+                disabled={isResending}
                 onClick={async () => {
+                  setIsResending(true);
+                  setResendMsg('');
                   try {
                     await api.auth.resendVerification(email);
-                  } catch {}
+                    setResendMsg('Verification email sent!');
+                  } catch {
+                    setResendMsg('Failed to resend. Please try again.');
+                  } finally {
+                    setIsResending(false);
+                  }
                 }}
-                className="text-primary-base hover:text-primary-hover underline bg-transparent border-none p-0 cursor-pointer"
+                className="text-primary-base hover:text-primary-hover underline bg-transparent border-none p-0 cursor-pointer disabled:text-surface-disabled disabled:cursor-not-allowed"
               >
-                resend
+                {isResending ? 'sending...' : 'resend'}
               </button>
             </p>
             <button
